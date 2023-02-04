@@ -1,0 +1,10 @@
+on:
+  pull_request:
+    branches: main
+    paths-ignore:
+      - 'README.md'
+  workflow_dispatch:
+
+jobs:
+  pr_check:
+    uses: r4ds/r4dsactions/.github/workflows/render_check.yml@main
