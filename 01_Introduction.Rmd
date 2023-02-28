@@ -40,7 +40,7 @@
  
 Each chapter has exercises (with a companion web site) 
 
-## What is geocomputaion?
+## What is geocomputation?
 
 - Start with Stan Openshaw:
 
@@ -97,7 +97,7 @@ my_buffer_4326 <- sf::st_transform(my_buffer, 4326)    # transform back
 
 - Great spatial statistics  
 
-## Software for geocomputaion 
+## Software for geocomputation 
 
 R (and Python) is an interpreted language : Read - Eval - Print Loop (REPL)  
 - C++ : QGIS, GRASS, SAGA
