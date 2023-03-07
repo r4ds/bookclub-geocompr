@@ -53,7 +53,7 @@ libraries:
 
 It is an open standard from Open Geospatial Consortium.
 
-The standard has 18 geometry types and **sf** implement the 7 most import ones (points, lines, polygons, their nulti-counterparts and geometry collection). 
+The standard has 18 geometry types and **sf** implement the 7 most import ones (points, lines, polygons, their multi-counterparts and geometry collection). 
 
 ```{r vignette, eval=FALSE}
 # TODO live
@@ -61,7 +61,7 @@ vignette(package = "sf")
 vignette("sf1")
 ```
 
-Simples features are stored in data frame with a special column (`geom` / `geometry`). 
+Simple features are stored in data frame with a special column (`geom` / `geometry`). 
 
 To explore it we will use the `world` data from `spData`(`?world`).
 
@@ -114,7 +114,7 @@ plot(asia, add = TRUE, col = "red")
 
 -> for more advanced mapping: [**tmap**](https://cran.r-project.org/web/packages/tmap/vignettes/tmap-getstarted.html) 
 
-But base plot is still a powerfull tool:
+But base plot is still a powerful tool:
 
 ```{r advanced_plot}
 plot(world["continent"], reset = FALSE)
@@ -207,7 +207,7 @@ it can be provided when building sfc
 ```{r}
 # Set the CRS with an identifier referring to an 'EPSG' CRS code:
 points_sfc_wgs = st_sfc(point1, point2, crs = "EPSG:4326")
-st_crs(points_sfc_wgs) # print CRS (only first 4 lines of output shown)
+st_crs(points_sfc_wgs) 
 # TODO erase EPSG and see what we have 
 ```
 
@@ -248,7 +248,138 @@ india_buffer_without_s2 = st_buffer(india, 1)
 #> endCapStyle, : st_buffer does not correctly buffer longitude/latitude data
 #> dist is assumed to be in decimal degrees (arc_degrees).
 ```
+## Raster
 
+The book will focus on regular grids, ie cell with constant size. Other grids exist.
+
+The raster data model consists:
+
+- an header with CRS, extent (cols, rows, cell size), origin (usually lower left)
+
+- a matrix
+
+Raster does not need to store CRS at every cell or at the four corner -> faster processing but a cell can only contains a single value. 
+
+### R packages for raster data
+
+- {raster} -> {terra}: 
+  * focus on regular grid,  
+  * one or multi-layered rasters,  
+  * uses C++ or C++ pointers,  
+  * uses its own vector data model,  
+  * rely on built-in function that works on its objects
+
+- {stars}: 
+  * manage also other grids, 
+  * raster data cubes,  
+  * stars store value has list of array or file path to large one,  
+  * rely on sf for vector,  
+  * built-in function + methods for existing R functions
+
+In both cases: 
+
+- raster should have the same extent 
+
+- raster can be read in memory / just the metadata
+
+You can convert from one to an other (`st_as_stars()` or `rast()`). 
+
+### Introduction to terra
+
+Like **sp** you can still find a lot of **raster**. **terra** offer backward compatibility.
+
+**terra** has the option to divide big raster in smaller chunks. 
+
+```{r}
+raster_filepath = system.file("raster/srtm.tif", package = "spDataLarge")
+my_rast = rast(raster_filepath)
+class(my_rast)
+my_rast
+ext(my_rast)
+inMemory(my_rast)
+# help("terra-package")
+```
+
+### Basic map making
+
+```{r}
+plot(my_rast)
+# see also terra::plotRGB()
+# rasterVis::levelplot()
+```
+
+### Raster classes
+
+**terra** also uses GDAL for reading/writing. 
+
+`rast()` can create raster from scratch:
+
+```{r}
+new_raster = rast(nrows = 6, ncols = 6, 
+                  xmin = -1.5, xmax = 1.5, ymin = -1.5, ymax = 1.5,
+                  vals = 1:36)
+```
+
+`SpatRaster` can also deals with multiple layers:
+
+```{r}
+multi_raster_file = system.file("raster/landsat.tif", package = "spDataLarge")
+multi_rast = rast(multi_raster_file)
+multi_rast
+nlyr(multi_rast)
+```
+
+they can be subset: 
+
+```{r}
+multi_rast3 = subset(multi_rast, 3)
+multi_rast4 = subset(multi_rast, "landsat_4")
+```
+
+And combine:
+
+```{r}
+multi_rast34 = c(multi_rast3, multi_rast4)
+```
+
+As raster are usualy not stored `.rds/.rda` are not an option to store them. We can: 
+
+- `wrap()` / `unwrap()` to save the reference object
+
+- `writeRaster()`
+
+## Geographic and projected coordinate reference systems (CRS)
+
+### Geographic coordinate systems
+
+> Longitude is location in the East-West direction in angular distance from the Prime Meridian plane. Latitude is angular distance North or South of the equatorial plane. 
+
+Earth is not flat! and not exactly a sphere (neither an ellipsoids)
+
+To define an ellipsoids we need the polar (*semi-minor axis*) and equatorial radius (*semi-major axis*).
+
+The *datum* (geocentruc / local) contains information on what kind of ellispoid use and the relation with Cartesian coordinates on earth surface. 
+
+### Projected coordinate reference systems
+
+- based on a geographic CRS
+
+- Cartesian coordinates, flat surfaces with x(easting)/y(northing) origin 
+
+- they can be conic, cylindrical, planar
+
+### Units
+
+CRS have specific units, **sf** use **units** to keep track of them. 
+
+```{r}
+luxembourg = world[world$name_long == "Luxembourg", ]
+st_area(luxembourg) / 1000000
+units::set_units(st_area(luxembourg), km^2)
+#> 2409 [km^2]
+```
+
+For a raster you can use `res()`
 
 ## Meeting Videos
 
