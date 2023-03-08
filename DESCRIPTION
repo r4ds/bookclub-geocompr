@@ -1,14 +1,10 @@
 Package: bookclub-geocompr
 Title: Geocomputation with R Book Club
 Version: 0.0.1
-Authors@R: c(
-  person(
-    "R4DS Online Learning Community",
-    email = "rfordatasci@gmail.com",
-    role = c("aut", "cre", "cph")
-  )
-  )
-URL: https://r4ds.github.io/bookclub-geocompr, https://github.com/r4ds/bookclub-geocompr
+Authors@R: 
+    person("R4DS Online Learning Community", , , "rfordatasci@gmail.com", role = c("aut", "cre", "cph"))
+URL: https://r4ds.github.io/bookclub-geocompr,
+    https://github.com/r4ds/bookclub-geocompr
 Depends:
     R (>= 3.1.0)
 Imports: 
@@ -16,6 +12,9 @@ Imports:
     geocompkg,
     rmarkdown,
     spData,
+    spDataLarge
 Remotes:
     geocompx/geocompkg,
     mtennekes/tmap
+Additional_repositories: https://nowosad.r-universe.dev
+Encoding: UTF-8
