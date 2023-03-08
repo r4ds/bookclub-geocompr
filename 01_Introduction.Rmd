@@ -2,12 +2,134 @@
 
 **Learning objectives:**
 
-- THESE ARE NICE TO HAVE BUT NOT ABSOLUTELY NECESSARY
+- Learn about the history of "spatial in R"  
+- Navigate terms like Geocomputation, GIS, Spatial Data Science 
+- Consider the advantages of CLI  
+- Consider the advantages of R
 
-## SLIDE 1
+## Foreword 1st edition (R. Bivand) 
 
-- ADD SLIDES AS SECTIONS (`##`).
-- TRY TO KEEP THEM RELATIVELY SLIDE-LIKE; THESE ARE NOTES, NOT THE BOOK ITSELF.
+**"Doing spatial in R"**:
+
+  - Being broad  
+  - Open Source code  
+  - Open data  
+  - Reproducibility  
+  - Learning from similar communities around open source GIS
+
+
+
+  1) Engage with the authors and the wider R-spatial community
+  
+  2) Build your **workflow**
+
+  3) Enjoy it
+  
+  
+## Preface
+ 
+ - target a wide audience: from GIS professional/specialist to useR   
+ 
+ - Intermediate to advanced R user.
+ 
+ The book has 3 parts: 
+ 
+ - Foundations: 7 chapters  
+ - Extensions: 4 chapters  
+ - Applications: 4 chapters  
+ 
+Each chapter has exercises (with a companion web site) 
+
+## What is geocomputation?
+
+- Start with Stan Openshaw:
+
+> “GeoComputation is about using the various different types of geodata and about developing relevant geo-tools within the overall context of a ‘scientific’ approach.”
+
+- Authors include: reproducibility and collaboration: 
+
+> working with geographic data in a computational way, focusing on code, reproducibility and modularity.
+
+- Part of Geography, expanding the tools used
+
+- GIS (geographical information system/science), geomatics, geoinformatics, spatial information science, geographical data science, spatial data science (not mention by the authors) : more overlaps than difference.
+
+## Why R 
+
+### CLI vs GUI
+
+- Command Line Interface (CLI) faster than a GUI
+
+Example:  Broadband Analyst checking Networks
+
+Current workflow: 
+
+1. Download Data from gov. agency (web browser)  
+2. Check the data in QGIS (eyeball data)
+2b. Correct data 
+3. Transform to an appropriate CRS (coordinate system)
+4. Create a buffer
+5. Transform buffer to the previous CRS
+6. Send back data to gov. agency
+
+An example of a workflow with R:
+
+```{r workflowexample, eval=FALSE}
+# data could be read directly from gov. agency but this is an other topic
+my_network <- sf::read_sf("my_data.shp")               # read data into R 
+mapview::mapview(my_network)                           # eyeball data 
+# 2b still hard in R, but data could be tested 
+my_network_planarCRS <- sf::st_transform(my_network
+                                         , 32616)      # UTM 
+my_buffer <- sf::st_buffer(my_network_planarCRS, 500)  # buffer 500m
+my_buffer_4326 <- sf::st_transform(my_buffer, 4326)    # transform back 
+# data could also be send directly with R
+```
+
+
+- Code above is fully reproducible
+
+- Volume/velocity of data: GPS/smartphone, UAV, Remote sensing etc..   
+
+- "Interfaces to other software are part of R" (**Rcpp**, **reticulate**).
+
+- Lot of flexibility to produce what you need (*your workflow*)
+
+- Great spatial statistics  
+
+## Software for geocomputation 
+
+R (and Python) is an interpreted language : Read - Eval - Print Loop (REPL)  
+- C++ : QGIS, GRASS, SAGA
+
+- Java : GeoTools, JTS, Geoserver/Geonode
+
+- Python: lot of API and can be used to call geoalgorithms in QGIS or ArcMap
+
+
+## R spatial ecosystem
+
+Two group of developments : 
+
+- {sp} --> {sf}: https://r-spatial.org/ 
+
+- {raster} --> {terra}: https://www.rspatial.org/
+
+## The history of R-spatial
+
+- 1990s development of numerous S scripts/package
+
+- 2000  R packages for spatial methods (points patterns, geostatistics, EDA)
+
+- 2008 Applied Spatial Data Analysis with R first edition ({rgdal} 2003, {sp} 2005)
+
+- 2009:{Rgooglemaps}, {ggmap} (basemap for ggplot2)
+
+- 2010: {rgeos} / {raster}
+
+- 2018: Breaking change PROJ: `proj string` --> `WKT` 
+
+- Huge increase in viz/carto packages: {gganimate}, {rayshader}, {tmap}, {mapview}, {mapsf}
 
 ## Meeting Videos
 
