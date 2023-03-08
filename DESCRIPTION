@@ -11,6 +11,7 @@ Imports:
     bookdown,
     geocompkg,
     rmarkdown,
+    sfheaders,
     spData,
     spDataLarge
 Remotes:
