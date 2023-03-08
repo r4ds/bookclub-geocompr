@@ -10,6 +10,7 @@ Depends:
 Imports: 
     bookdown,
     geocompkg,
+    lwgeom,
     rmarkdown,
     sfheaders,
     spData,
