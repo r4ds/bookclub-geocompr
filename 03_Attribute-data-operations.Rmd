@@ -1,15 +1,509 @@
-# Attribute data operations
+# Attribute Data Operations
 
 **Learning objectives:**
 
-- THESE ARE NICE TO HAVE BUT NOT ABSOLUTELY NECESSARY
+- Learn how to explore and manipulate non-spatial attributes of geographic data
 
-## SLIDE 1
+![](https://www.searchenginejournal.com/wp-content/uploads/2020/12/9-html-tags-11-attributes-you-must-know-for-seo-5fca27dc748f4-1520x800.webp)
 
-- ADD SLIDES AS SECTIONS (`##`).
-- TRY TO KEEP THEM RELATIVELY SLIDE-LIKE; THESE ARE NOTES, NOT THE BOOK ITSELF.
+The package setup for this chapter of the book:
+
+```{r}
+#| label: Chapter3 subsetting
+#| message: false
+#| warning: false
+
+library(sf)      # vector data package introduced in Chapter 2
+library(terra)   # raster data package introduced in Chapter 2
+library(dplyr, quietly = TRUE)   # tidyverse package for data frame manipulation
+library(tidyr)
+
+library(ggplot2)
+
+library(spData)  # spatial data package introduced in Chapter 2
+
+# usethis::pr_init("Chapter_3") # one time create a new git branch on the clone of my fork
+# devtools::install_dev_deps() # locally install packages required by the book build
+
+# Control-shift-b builds the book
+
+```
+
+
+![](https://images.unsplash.com/photo-1563376043-8ad2936236fa?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1510&q=80)
+
+Attributes are the non-spatial information assigned to geometries in the data.  Consider an entity like a bus stop.  Examples of attributes include
+
+1. latitude
+1. longitude
+1. name
+1. elevation above sea level
+1. ridership, arriving and departing, by hour
+1. cost to build
+1. gdp, by year 
+1. temperature, by hour
+
+Let's get on the bus and go!
+
+<iframe src="https://giphy.com/embed/LnEiYwBa4oPqNJKzDg" width="480" height="270" frameBorder="0" class="giphy-embed" allowFullScreen></iframe><p><a href="https://giphy.com/gifs/fallontonight-jimmy-fallon-tonight-show-sesame-street-LnEiYwBa4oPqNJKzDg">via GIPHY</a></p>
+
+## Vector Objects
+
+The `sf` package builds on the `data.frame`, adding a sticky `sfc` class column that contain wide a range of geographic entities.  
+
+![](https://user-images.githubusercontent.com/520851/34887433-ce1d130e-f7c6-11e7-83fc-d60ad4fae6bd.gif)
+
+This is a huge package, with more than one hundred methods, including
+
+> aggregate, rbind, cbind, merge
+
+> filter, select, group_by, full_join, mutate
+
+The latter group extends the `tidyverse` functionality.
+
+```{r}
+#| label: Chapter3 sf methods
+#| message: false
+#| warning: false
+
+methods(class = "sf")   # methods for sf objects
+
+```
+
+The [package web site](https://r-spatial.github.io/sf/) has a cheat sheet, links to blogs, and a nice set of quick start Articles.
+
+![](https://user-images.githubusercontent.com/520851/50280460-e35c1880-044c-11e9-9ed7-cc46754e49db.jpg)
+
+A recap: how to discover the basic properties of data objects:
+
+```{r}
+#| label: Chapter3 spData class and dimensions
+#| message: false
+#| warning: false
+
+class(spData::world) # it's an sf object and a (tidy) data frame
+
+dim(spData::world)   # it is a 2 dimensional object, with 177 rows and 11 columns
+
+```
+
+`st_drop_geometry()` strips away both the geometry column as well as the `sf` class:
+
+```{r}
+#| label: Chapter3 drop geometry
+#| message: false
+#| warning: false
+
+world_df = st_drop_geometry(world)
+
+class(world_df)
+
+ncol(world_df)
+
+```
+
+![](https://images.unsplash.com/photo-1476304884326-cd2c88572c5f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1469&q=80)
+
+### Subsetting
+
+> in base R, `[` and `subset()`
+
+> in `dplyr`, `filter()`, `slice()`, and `select()`
+
+> also `pull()` to extract a vector from a dataframe
+
+```{r}
+#| label: Chapter3 subset1
+#| message: false
+#| warning: false
+world[1:6, ]    # subset rows by position
+world[, 1:3]    # subset columns by position
+world[1:6, 1:3] # subset rows and columns by position
+world[, c("name_long", "pop")] # columns by name
+world[, c(T, T, F, F, F, F, F, T, T, F, F)] # by logical indices
+```
+
+
+
+```{r}
+#| label: Chapter3 subset2
+#| eval: false
+world[, 888] # an index representing a non-existent column
+```
+
+```
+Error in `x[i, j, drop = drop]`:
+! Can't subset columns past the end.
+ℹ Location 888 doesn't exist.
+ℹ There are only 11 columns.
+Run `rlang::last_trace()` to see where the error occurred.
+```
+
+#### Using `logical` vectors for subsetting
+
+```{r}
+#| label: Chapter3 subset3
+#| message: false
+
+i_small <- world$area_km2 < 10000
+
+summary(i_small) # a logical vector
+
+small_countries <- world[i_small, ]
+
+small_countries
+
+```
+
+#### base R `subset` columns
+
+```{r}
+#| label: Chapter3 subset4
+#| message: false
+
+subset(world, area_km2 < 10000)
+
+```
+
+#### Using `dplyr`on columns
+
+Note that when we select two columns from the world dataframe, the sticky geom column comes along.
+
+```{r}
+#| label: Chapter3 subset5
+
+world1 <- dplyr::select(world, name_long, pop)
+
+names(world1)
+
+```
+
+Select a range of columns
+
+```{r}
+#| label: Chapter3 subset6
+
+world2 <- dplyr::select(world, name_long:pop)
+
+names(world2)
+
+```
+
+Remove a column
+
+```{r}
+#| label: Chapter3 subset7
+
+world3 = dplyr::select(world, -subregion, -area_km2)
+
+names(world3)
+
+```
+
+`select()` also works with more advanced ‘helper functions, including `contains()`, `starts_with()` and `num_range()`
+
+#### Using `dplyr`on rows
+
+```{r}
+#| label: Chapter3 subset8
+
+dplyr::slice_head(world, n =6)
+
+```
+
+See also `slice_max()`, `slice_min()`, `slice_sample()`, and `slice_tail()`
+
+```{r}
+#| label: Chapter3 subset9
+
+dplyr::filter(world, area_km2 < 1e4)
+
+```
+
+![](https://dplyr.tidyverse.org/logo.png)
+
+### Chaining
+
+`dplyr` makes good use of pipe operators `%>%` and `|>`
+
+```{r}
+#| label: Chapter3 chaining
+
+world7 <- world |>
+  filter(continent == "Asia") |>
+  select(name_long, continent) |>
+  slice_head(n = 5)
+
+world7
+```
+
+### Aggregation
+
+Aggregation involves summarizing data with one or more ‘grouping variables’
+
+in base R, using the non-`sf` function
+
+```{r}
+#| label: Chapter3 aggregation
+
+world_agg1 <- stats::aggregate(pop ~ continent, 
+                       FUN = sum, 
+                       data = world,
+                       na.rm = TRUE)
+world_agg1
+
+class(world_agg1)
+
+```
+
+`sf` provides the method `aggregate.sf()` which is activated automatically when x is an sf object and a by argument is provided
+
+```{r}
+#| label: Chapter3 aggregation2
+
+world_agg2 <- aggregate(world["pop"], 
+                       by = list(world$continent), 
+                       FUN = sum, 
+                       na.rm = TRUE)
+class(world_agg2)
+
+nrow(world_agg2)
+
+```
+
+The `dplyr` equivalent
+
+```{r}
+#| label: Chapter3 aggregation3
+
+world_agg3 <- world |>
+  group_by(continent) |> 
+  summarize(pop = sum(pop, na.rm = TRUE))
+
+class(world_agg3)
+
+nrow(world_agg3)
+
+```
+
+benefits: flexibility, readability, and control over the new column names
+
+Let’s combine what we have learned so far about `dplyr` functions
+
+```{r}
+#| label: Chapter3 aggregation4
+
+world |> 
+  st_drop_geometry() |>                      # drop the geometry for speed
+  select(pop, continent, area_km2) |> # subset the columns of interest  
+  group_by(continent) |>                     # group by continent and summarize:
+  summarize(Pop = sum(pop, na.rm = TRUE), Area = sum(area_km2), N = n()) |>
+  mutate(Density = round(Pop / Area)) |>     # calculate population density
+  slice_max(Pop, n = 3) |>                   # keep only the top 3
+  arrange(desc(N))                           # arrange in order of n. countries
+```
+
+![](https://images.unsplash.com/photo-1484318571209-661cf29a69c3?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1470&q=80)
+
+### Joining
+
+Joins combining data from different sources on a shared ‘key’ variable.
+
+see `vignette("two-table")` for a good overview
+
+We will combine data on coffee production with the `world` dataset. 
+
+Note that coffee is a regular dataframe, while world is both a dataframe and an sf object.
+
+```{r}
+#| label: Chapter3 joining1
+
+class(coffee_data)
+
+world_coffee <- left_join(world, coffee_data)
+
+class(world_coffee)
+
+```
+
+Note the difference when the join is done in the reverse order
+
+```{r}
+#| label: Chapter3 joining2
+
+world_coffee2 <- left_join(coffee_data, world)
+
+class(world_coffee2)
+
+```
+
+
+```{r}
+#| label: Chapter3 joining3
+
+world_coffee |> 
+  ggplot(aes(fill = coffee_production_2017)) +
+  geom_sf() +
+  scale_fill_fermenter(na.value = "grey99", direction = 1) +
+  theme_minimal() +
+  labs(title = "Coffee Production 2017", fill = NULL)
+
+```
+
+For joining to work, a ‘key variable’ must be supplied in both datasets. By default, dplyr uses all variables with matching names. 
+
+### Creating and removing attributes
+
+Often, we would like to create a new column based on already existing columns. For example, we want to calculate population density for each country.
+
+```{r}
+#| label: Chapter3 new attribute
+
+world_new2 <- world |> 
+  mutate(pop_dens = pop / area_km2) |> 
+  select(name_long, pop_dens)
+
+world_new2
+
+```
+
+`unite()` from the `tidyr` package pastes together existing columns.
+
+```{r}
+#| label: Chapter3 unite
+ 
+world_unite <- world |>
+  tidyr::unite(col = "con_reg", continent:region_un, sep = ":", remove = TRUE) |> 
+  select(con_reg)
+
+world_unite
+
+```
+
+`tidyr` `separate()` splits one column into multiple columns using either a regular expression or character positions
+
+```{r}
+#| label: Chapter3 separate
+
+world_separate <- world_unite |>
+  tidyr::separate(con_reg, c("continent", "region_un"), sep = ":")
+
+world_separate
+
+```
+
+![](https://tidyr.tidyverse.org/logo.png)
+
+## Raster Objects
+
+Raster data represent continuous surfaces across a grid pattern, often in multiple layers.
+
+A tiff image is a raster data file.
+
+Let's build one `from scratch`.
+
+The result is a raster object with 6 rows and 6 columns, and a minimum and maximum spatial extent in x and y direction. The vals argument sets the values that each cell contains: numeric data ranging from 1 to 36. 
+
+```{r}
+#| label: Chapter3 build raster
+
+elev = rast(nrows = 6, ncols = 6,
+            xmin = -1.5, xmax = 1.5, ymin = -1.5, ymax = 1.5,
+            vals = 1:36)
+
+plot(elev)
+
+```
+
+Raster objects can also contain categorical values of class logical or factor variables 
+
+```{r}
+#| label: Chapter3 build grain raster
+
+grain_order <- c("clay", "silt", "sand")
+grain_char <- sample(grain_order, 36, replace = TRUE)
+grain_fact <- factor(grain_char, levels = grain_order)
+grain <- rast(
+  nrows = 6,
+  ncols = 6,
+  xmin = -1.5,
+  xmax = 1.5,
+  ymin = -1.5,
+  ymax = 1.5,
+  vals = grain_fact
+)
+
+plot(grain)
+```
+
+The raster object stores the corresponding look-up table as a list of data frames, which can be viewed with `cats(grain)`
+
+### Subsetting
+
+In base R, `[`
+
+```{r}
+#| label: Chapter3 build grain raster top left
+
+elev[1,1]
+
+```
+
+Cell values can be modified by overwriting existing values in conjunction with a subsetting operation.
+
+```{r}
+#| label: Chapter3 overwrite raster
+
+elev[3, 3] <- 0
+
+elev[3, 3]
+
+plot(elev)
+```
+
+### Summarizing
+
+![](https://github.com/rspatial/terra/raw/master/man/figures/logo.png)
+
+`terra` contains functions for extracting descriptive statistics for entire rasters.
+
+summary operations such as the standard deviation or custom summary statistics can be calculated with `global()`
+
+The `freq()` function allows to get the frequency table of categorical values.
+
+```{r}
+#| label: Chapter3 raster summary stats1
+
+elev
+
+summary(elev)
+
+global(elev, sd)
+
+freq(elev)
+
+```
+
+Raster value statistics can be visualized in a variety of ways. Specific functions such as `boxplot()`, `density()`, `hist()` and `pairs()` work also with raster objects.
+
+```{r}
+#| label: Chapter3 raster summary stats2
+#| fig.show: "hold"
+#| out.width: "50%"
+par(mar = c(4, 4, .1, .1))
+
+boxplot(grain)
+
+density(grain)
+
+hist(grain)
+
+```
+
 
 ## Meeting Videos
+
+
 
 ### Cohort 1
 
