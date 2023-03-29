@@ -507,12 +507,17 @@ hist(grain)
 
 ### Cohort 1
 
-`r knitr::include_url("https://www.youtube.com/embed/URL")`
+`r knitr::include_url("https://www.youtube.com/embed/knKVzIh4lug")`
 
 <details>
 <summary> Meeting chat log </summary>
 
 ```
-LOG
+00:23:22	Trevin:	I'm switching over to |>
+00:23:25	Derek Sollberger:	using base-R pipe (mostly in teaching settings)
+00:23:47	Oluwafemi Oyedele:	I use the base pipe
+00:23:47	Trevin:	There's still a bunch of %>% in my code base
+00:25:22	Trevin:	There may be speed advantages for new base pipe over Magrittr (?)
+00:26:08	Derek Sollberger:	On the other hand, there are probably still a few dplyr workflows that do not work with the base-R pipe
 ```
 </details>
