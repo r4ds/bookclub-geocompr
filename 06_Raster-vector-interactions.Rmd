@@ -2,12 +2,213 @@
 
 **Learning objectives:**
 
-- THESE ARE NICE TO HAVE BUT NOT ABSOLUTELY NECESSARY
+- Raster cropping/masking
 
-## SLIDE 1
+- Extracting raster value with vector data
 
-- ADD SLIDES AS SECTIONS (`##`).
-- TRY TO KEEP THEM RELATIVELY SLIDE-LIKE; THESE ARE NOTES, NOT THE BOOK ITSELF.
+- Raster <-> vector conversion i
+
+```{r}
+library(sf)
+library(terra)
+library(dplyr)
+```
+
+
+## Raster cropping/masking
+
+One (very) common problem:  the extent of input raster is larger than the area of interest. 
+
+Solution: Cropping and masking!
+
+```{r}
+# a raster:  SpatRaster
+srtm = terra::rast(system.file("raster/srtm.tif", package = "spDataLarge"))
+zion = sf::read_sf(system.file("vector/zion.gpkg", package = "spDataLarge"))
+# same CRS for both of this object
+zion = st_transform(zion, crs(srtm))
+# always do a quick viz
+plot(srtm, col = grDevices::terrain.colors(50))
+plot(zion$geom, add = TRUE)
+```
+
+## Raster cropping/masking: Crop
+
+We are limiting the extend: 
+
+```{r}
+srtm_cropped = terra::crop(srtm, zion)
+plot(srtm_cropped, col = grDevices::terrain.colors(50))
+plot(zion$geom, add = TRUE)
+```
+
+## Raster cropping/masking: mask
+
+Value outside of our area of interest: `NA` (could be change with `updatevalue`).
+
+```{r}
+srtm_masked = terra::mask(srtm, zion)
+plot(srtm_masked, col = grDevices::terrain.colors(50))
+plot(zion$geom, add = TRUE)
+# srtm_inv_masked = mask(srtm, zion, inverse = TRUE)
+```
+
+## Raster extraction
+
+We want to extract values from "target" based on a selector (lot of time a vector). The result will depend on the type of object (point, lines, polygons) we are using to select.
+
+### Extracting value on points
+
+```{r}
+data("zion_points", package = "spDataLarge")
+elevation = terra::extract(srtm, zion_points)
+zion_points_elev = cbind(zion_points, elevation)
+
+plot(srtm_masked, col = grDevices::terrain.colors(50))
+plot(zion_points, add = TRUE, pch = 16)
+```
+
+### Extracting value on lines
+
+First we create a line:
+
+```{r}
+zion_transect = cbind(c(-113.2, -112.9), c(37.45, 37.2)) |>
+  sf::st_linestring() |> 
+  sf::st_sfc(crs = crs(srtm)) |>
+  sf::st_sf(geometry = _ ) # <- fancy new place holder
+
+plot(srtm_masked, col = grDevices::terrain.colors(50))
+plot(zion_transect, add = TRUE, lwd = 3)
+```
+
+The we are using points on this line: 
+
+```{r}
+zion_transect$id = 1:nrow(zion_transect) # just on transect
+zion_transect = st_segmentize(zion_transect, dfMaxLength = 250) # I am curious why I get 257 pts
+# we are casting as POINT
+zion_transect = st_cast(zion_transect, "POINT")
+```
+
+ I am not sure we need the `group_by()` ?
+
+```{r}
+zion_transect = zion_transect |> 
+  #group_by(id) |> 
+  mutate(dist = st_distance(geometry)[, 1]) 
+```
+
+```{r}
+zion_elev = terra::extract(srtm, zion_transect)
+# just cbind 
+zion_transect = cbind(zion_transect, zion_elev)
+# quick plot
+plot(zion_transect$dist, zion_transect$srtm, type = "l")
+```
+
+
+### Extracting value on polygons
+
+```{r}
+zion_srtm_values = terra::extract(x = srtm, y = zion)
+dim(zion_srtm_values)
+```
+
+### With quantitative data:
+
+```{r}
+group_by(zion_srtm_values, ID) |> 
+  summarize(across(srtm, list(min = min, mean = mean, max = max)))
+```
+
+### With qualitative data:
+
+```{r}
+nlcd = rast(system.file("raster/nlcd.tif", package = "spDataLarge"))
+zion2 = st_transform(zion, st_crs(nlcd))
+zion_nlcd = terra::extract(nlcd, zion2)
+zion_nlcd |> 
+  group_by(ID, levels) |>
+  count()
+```
+
+**Important!** If you are using a lot of polygons you should use [exactextract](https://github.com/isciences/exactextractr) 
+
+## Rasterization
+
+Vector ---> Raster : `terra::rasterize()`
+
+We are using a data set from `spData`:
+
+```{r}
+# the easy part
+cycle_hire_osm = spData::cycle_hire_osm
+cycle_hire_osm_projected = st_transform(cycle_hire_osm, "EPSG:27700")
+# The new part: building a raster template
+raster_template = terra::rast(ext(cycle_hire_osm_projected), resolution = 1000,
+                       crs = st_crs(cycle_hire_osm_projected)$wkt)
+```
+
+- First Presence/absence:
+
+```{r}
+ch_raster1 = rasterize(cycle_hire_osm_projected, raster_template)
+plot(ch_raster1, col = "yellow")
+```
+
+- Second: count with `length` :
+
+```{r}
+ch_raster2 = rasterize(cycle_hire_osm_projected, raster_template, 
+                       fun = "length")
+plot(ch_raster2)
+```
+
+
+- Third: sum of a variable
+
+```{r}
+ch_raster3 = terra::rasterize(cycle_hire_osm_projected, raster_template, 
+                       field = "capacity", fun = sum, na.rm = TRUE)
+plot(ch_raster3)
+```
+
+`rasterize()` has an argument `touches` that is useful when dealing with lines or polygon border.
+
+
+## Spatial vectorization
+
+raster ---> vector: `as.point s()`, `as.polygon()`
+
+```{r}
+elev = rast(system.file("raster/elev.tif", package = "spData"))
+elev_point = terra::as.points(elev) |> 
+  st_as_sf()
+plot(elev_point["elev"])
+```
+
+```{r}
+dem = rast(system.file("raster/dem.tif", package = "spDataLarge"))
+cl = terra::as.contour(dem) |> 
+  st_as_sf()
+plot(dem, axes = FALSE)
+plot(cl, add = TRUE)
+```
+
+```{r}
+grain = rast(system.file("raster/grain.tif", package = "spData"))
+grain_poly = terra::as.polygons(grain) |> 
+  st_as_sf()
+plot(grain_poly)
+```
+
+```{r}
+grain_poly = terra::as.polygons(grain, dissolve = FALSE) |> 
+  st_as_sf()
+plot(grain_poly)
+```
+
 
 ## Meeting Videos
 

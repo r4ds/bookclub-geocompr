@@ -1,13 +1,216 @@
 # Reprojecting geographic data
 
+Build on previous chapters: *geographic*/*projected* CRS 
+
 **Learning objectives:**
 
-- THESE ARE NICE TO HAVE BUT NOT ABSOLUTELY NECESSARY
+- Interact with CRS (`sf::st_crs`, `terra::crs`)
+- What kind of trouble we can run into misusing CRS
+- When/how to transform  (`sf::st_transform`, `terra::project`) 
+- Which one to use   
 
-## SLIDE 1
+```{r}
+library(sf)
+library(terra)
+library(dplyr)
+library(spData)
+library(spDataLarge)
+```
 
-- ADD SLIDES AS SECTIONS (`##`).
-- TRY TO KEEP THEM RELATIVELY SLIDE-LIKE; THESE ARE NOTES, NOT THE BOOK ITSELF.
+
+## Coordinate Reference System (CRS)
+
+Upstream: [PROJ](https://proj.org/development/quickstart.html)
+
+Sometimes CRS can be loosely defined: 
+
+- "lat/long"   
+
+- Outdated *proj4string* (just *projstring*):  `+proj=longlat +ellps=WGS84 +datum=WGS84 +no_def`  
+- "AUTHORITY:CODE": `EPSG:4326`  
+
+They are the same but only the last one is rigorous and less ambiguous. 
+
+We can inspect them that way: 
+
+```{r}
+sf::st_crs("EPSG:4326")
+# investigated the R object
+```
+
+-> https://epsg.io/
+
+We are currently using WKT2 (but I see regularly WKT1 and proj4string). 
+
+The last line is also called **SRID**: Spatial Reference IDentifier. 
+
+## Querying and Setting CRS
+
+### For vector:
+
+- `sf::st_crs` : get the CRS
+
+- `sf::st_crs("ESPG::4326")$input` : how the user specified the CRS
+
+- `sf::st_crs("ESPG:4326")$wkt` : WKT, use `cat()`
+
+```{r}
+sf::st_set_crs # is a convenient function
+```
+
+### Raster:
+
+```{r, eval=FALSE}
+terra::crs(my_rast) = "EPSG:26912"
+```
+
+
+**Attention!**: Setting does not alter coordinates values or geometries
+
+You can also directly specify CRS with `crs` argument in `sf::st_crs()`/ `sf::st_as_asf()`  and `terra::rast()`
+
+## Geometry operations on projected/unprojected data
+
+sf use GEOS for projected and s2 for geographic CRS. 
+
+```{r}
+london = data.frame(lon = -0.1, lat = 51.5) |> 
+  st_as_sf(coords = c("lon", "lat"))
+st_is_longlat(london)
+london_geo = st_set_crs(london, "EPSG:4326")
+st_is_longlat(london_geo)
+```
+
+```{r}
+london_buff_no_crs = st_buffer(london, dist = 1)   # incorrect: no CRS
+london_buff_s2 = st_buffer(london_geo, dist = 100000) # silent use of s2
+london_buff_s2_100_cells = st_buffer(london_geo, dist = 100000, max_cells = 10000) # play with max_cells 
+# sf::sf_use_s2(FALSE)
+london_proj = data.frame(x = 530000, y = 180000) |> 
+  st_as_sf(coords = c("x", "y"), crs = "EPSG:27700")
+london_buff_projected = st_buffer(london_proj, 100000)
+```
+
+
+In geographic CRS:
+
+```{r}
+UK <- world[world$name_long == "United Kingdom",]
+plot(UK$geom)
+plot(london_buff_s2_100_cells, col = "red", add = TRUE)
+plot(london_buff_no_crs$geometry, add = TRUE, lwd = 3)
+```
+
+In projected CRS:
+
+```{r}
+plot(st_transform(UK$geom, "EPSG:27700"))
+plot(london_buff_projected$geometry, add = TRUE, lwd = 3, col = "blue")
+```
+
+
+## When to project?
+
+Hard to provide a generic answers but:
+
+- if you want to use leaflet: "EPSG:4326"  
+
+- When you want to compare two objects (or) they need to be in the same CRS
+
+## Which CRS to use?
+
+Same: no good answers! 
+
+-> Use the right one for every task
+
+If it is a geographic: the default is "EPSG:4326"
+
+### Projected:
+
+- Use the one that the public mapping agency use (In France "EPSG:2154")
+
+- UTM: for relatively small area (less than 6 degrees in longitude), you will have a distorted area farther you go from the center of UTM.
+
+- You can use https://crs-explorer.proj.org/
+
+
+You can pick: 
+
+- Conformal: preserving angles -> same shapes 
+
+- Equal area: keep area the same: good for density
+
+- equidistant: preserving distance
+
+- a mix of the above 
+
+The goal will be to minimize distortion. 
+
+Authors recommendations: 
+
+- Lambert Azimuthal Equal Area ([LAEA](https://en.wikipedia.org/wiki/Lambert_azimuthal_equal-area_projection)): same size but distorted shape
+
+- Azimuthal equidistant ([AEQD]https://en.wikipedia.org/wiki/Azimuthal_equidistant_projection)): accurate line distance between a point and the center point of the local projection
+
+- Lambert Conformal Conic ([LCC](https://en.wikipedia.org/wiki/Lambert_conformal_conic_projection)): good if you are away of equator
+
+- Stereographic ([STERE](https://en.wikipedia.org/wiki/Stereographic_map_projection)
+
+## Reprojecting vector geometries:
+
+Transforming coordinate points (vertices) and usually setting CRS
+
+```{r}
+london2 = st_transform(london_geo, "EPSG:27700")
+```
+
+
+```{r}
+crs_lnd = st_crs(london_geo) # see with london_proj
+class(crs_lnd) # we already see that
+names(crs_lnd) # same
+crs_lnd$Name
+crs_lnd$proj4string
+crs_lnd$epsg
+```
+
+## Reprojecting raster:
+
+- create a new raster object (with different rows/cols)
+
+- resampling values of every cell (using different resamploing methods)  
+
+Terra's function `project()` allow you to do that.
+
+As usual: nearest neighbour method  are good for categorical data. You have more option for quantitative data.
+
+```{r}
+cat_raster = rast(system.file("raster/nlcd.tif", package = "spDataLarge"))
+crs(cat_raster) |> cat()
+```
+
+```{r}
+cat_raster_wgs84 = project(cat_raster, "EPSG:4326", method = "near")
+cat_raster_wgs84
+cat_raster
+```
+
+## My tl:dr
+
+- Check good references before doing anything funny
+
+- Use recommended CRS by mapping institutions  
+
+- on small area it does not mapper too much
+
+
+## Resources:
+
+- http://www.geo.hunter.cuny.edu/~jochen/gtech201/lectures/lec6concepts/map%20coordinate%20systems/how%20to%20choose%20a%20projection.htm#
+
+- https://ihatecoordinatesystems.com/
+
+- https://mgimond.github.io/tissot/
 
 ## Meeting Videos
 
