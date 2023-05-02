@@ -16,8 +16,6 @@ library(terra)
 library(dplyr)
 library(ggplot2)
 library(spData)
-
-theme_set(ggthemes::theme_map())
 ```
 
 <iframe src="https://giphy.com/embed/GsiBgbwZAsWsg" width="480" height="360" frameBorder="0" class="giphy-embed" allowFullScreen></iframe><p><a href="https://giphy.com/gifs/hatutah-seasame-street-yippers-GsiBgbwZAsWsg">via GIPHY</a></p>
