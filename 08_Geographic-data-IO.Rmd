@@ -2,23 +2,591 @@
 
 **Learning objectives:**
 
-- THESE ARE NICE TO HAVE BUT NOT ABSOLUTELY NECESSARY
+- Care must be taken with geospatial I/O (Input and Output) 
+- Put time into identifying which datasets are *available* and how to *retrieve* them
+- There are many file formats, each of which has pros and cons
+- We will close with a brief note on saving maps as a bridge to next week's deeper Chapter 9 discussion 
 
-## SLIDE 1
+An component of the value that we can deliver is an understanding of what resources are available 
 
-- ADD SLIDES AS SECTIONS (`##`).
-- TRY TO KEEP THEM RELATIVELY SLIDE-LIKE; THESE ARE NOTES, NOT THE BOOK ITSELF.
+```{r}
+#| label: Chapter8 setup
+library(sf)
+library(terra)
+library(dplyr)
+library(ggplot2)
+library(spData)
+
+theme_set(ggthemes::theme_map())
+```
+
+<iframe src="https://giphy.com/embed/GsiBgbwZAsWsg" width="480" height="360" frameBorder="0" class="giphy-embed" allowFullScreen></iframe><p><a href="https://giphy.com/gifs/hatutah-seasame-street-yippers-GsiBgbwZAsWsg">via GIPHY</a></p>
+
+## Retrieving Open Data
+
+Important sources of high quality datasets:
+ 
+[Data.gov](https://catalog.data.gov/dataset?metadata_type=geospatial)
+
+![](https://s3-us-gov-west-1.amazonaws.com/cg-0817d6e3-93c4-4de8-8b32-da6919464e61/logo.png)
+
+[GEOSS](http://www.geoportal.org/)
+
+![](https://www.geoportal.org/geoss-theme/images/geoss-portal-transparent.png)
+
+[Copernicus](https://scihub.copernicus.eu/)
+
+![](https://scihub.copernicus.eu/twiki/pub/TWiki/DataHubSkin/copernicus-02.png)
+
+[NASA SEDAC](http://sedac.ciesin.columbia.edu/)
+
+![](https://sedac.ciesin.columbia.edu/imgs/nasa_meatball.png)
+
+[INSPIRE](http://inspire-geoportal.ec.europa.eu/)
+
+![](https://inspire.ec.europa.eu/cdn/1.0/img/ec.logo/logo_en.gif)
+
+Most geoportals provide a graphical interface allowing datasets to be queried on spatial and temporal extent
+
+[USGS EarthExplorer](https://earthexplorer.usgs.gov/)
+
+![](https://pubs.usgs.gov/circ/c1050/USGS.gif)
+
+*Exploring* datasets interactively on a browser is an effective way of understanding available layers. 
+
+*Downloading* data is best done with code. 
+
+One method is via direct download
+
+```{r}
+#| label: Chapter8 direct download
+#| eval: false
+
+download.file(url = "https://hs.pangaea.de/Maps/PeRL/PeRL_permafrost_landscapes.zip",
+              destfile = "PeRL_permafrost_landscapes.zip", 
+              mode = "wb")
+unzip("PeRL_permafrost_landscapes.zip")
+canada_perma_land = read_sf("PeRL_permafrost_landscapes/canada_perma_land.shp")
+
+```
+
+Other methods are via API calls, either through `httr` calls or simplified convenience packages
+
+## Geographic Data Packages
+
+Many R packages provide convenient interfaces to spatial libraries or geoportals 
+
+|Package |	Description |
+|---|---|
+|`osmdata`| small OpenStreetMap datasets.
+|`osmextract` |	large OpenStreetMap datasets.
+|`geodata` |	Download and import imports administrative, elevation, WorldClim data.
+|`rnaturalearth` |	ropensci Natural Earth 
+|`rnoaa` | (NOAA) climate data
+|`tidycensus` | US Demographics
+|`tigris` | US maps
+|`cancensus` | Canada Demographics
+|`eurostat` | EU
+|`giscoR` | EU
+|`idbr` | International Databases
+|`bcdata` | Province of British Columbia
+|`geobr` | Brazil
+|`RCzechia` | Czechia
+|`GSODR` | Global Summary Weather Data
+
+Each data package has its own syntax for accessing data.  See the package vignettes, and in many cases, textbooks.
+
+### Example 1: `rnaturalearth`
+
+This package recently changed maintainers and must be updated for dependencies:
+
+```{r}
+#| label: Chapter8 rnaturalearth
+#| eval: false
+library(rnaturalearth)
+usa <- ne_countries(country = "United States of America") # United States borders
+class(usa)
+
+```
+```
+
+[1] "SpatialPolygonsDataFrame"
+attr(,"package")
+[1] "sp"
+
+```
+
+By default `rnaturalearth` returns objects of class `Spatial*`. The result can be converted into an sf objects with `st_as_sf()`.
+
+### Example 2: `geodata`
+
+downloads a series of rasters containing global monthly precipitation sums with spatial resolution of ten minutes (~18.5km at the equator)
+
+```{r}
+#| label: Chapter8 geodata
+#| eval: false
+library(geodata)
+worldclim_prec <- worldclim_global("prec", res = 10, path = tempdir())
+class(worldclim_prec)
+```
+```
+
+[1] "SpatRaster"
+attr(,"package")
+[1] "terra"
+
+```
+
+### Example 3: `osmdata`
+
+OpenStreetMap is a vast global database of crowd-sourced data
+
+```{r}
+#| label: Chapter8 osmdata
+#| eval: false
+library(osmdata)
+parks <- opq(bbox = "chicago il") |> 
+  add_osm_feature(key = "leisure", value = "park") |> 
+  osmdata_sf()
+```
+
+A limitation with the osmdata package is that it is *rate limited*. Use `osmextract` to cache .pbf files.
+
+The data source and wider OSM ecosystems have many advantages: 
+
+they provide datasets that are available globally, 
+free of charge, and 
+constantly improving thanks to an army of volunteers. 
+
+Using OSM encourages ‘citizen science’ and contributions back to the digital commons 
+
+### Built-in datasets
+
+these four methods make the `world` data shapefile available
+
+```{r}
+#| label: Chapter8 builtin
+#| eval: false
+library(spData)  # loads all spData datasets
+data(world, package = "spData")
+world2 = spData::world # retrieves world from spData
+world3 = read_sf(system.file("shapes/world.gpkg", package = "spData")) # retrieves world from spData
+```
+
+### Geocoding
+
+Another way to obtain spatial information is to transform a description of a location, usually an address, into its coordinates. 
+
+Send a query to an online service and getting the location as a result.
+
+Recommends `tidygeocoder` for the variety of services available with a consistent interface.
+
+Also allows performing the opposite process,*reverse geocoding* to get a set of information (name, address, etc.) based on coordinates.
+
+## Geographic Web Services
+
+[Open Geospatial Consortium](https://www.ogc.org/) (OGC) specifications, or OWS provide for a standardized
+
+- Web Feature Service
+- Web Map Service
+- Web Map Tile Service
+- Web Coverage Service
+- Web Processing Service
+
+Map servers such as PostGIS have adopted these uniform protocols.
+
+The format is generally a ‘base URL’, an ‘endpoint’ and ‘URL query arguments’ following a ?
+
+```{r}
+#| label: Chapter8 OWS
+#| eval: false
+library(httr)
+base_url <- "http://www.fao.org"
+endpoint <- "/figis/geoserver/wfs"
+q <- list(request = "GetCapabilities")
+res <- GET(url = modify_url(base_url, path = endpoint), query = q)
+res$url
+
+```
+
+```
+#> [1] "https://www.fao.org/figis/geoserver/wfs?request=GetCapabilities"
+```
+
+![](https://www.fao.org/images/corporatelibraries/fao-logo/fao-logo-en.svg)
+
+Available names differ depending on the accessed web feature service.
+
+One way of extracting the contents of the request is
+
+```{r}
+#| label: Chapter8 OWS2
+#| eval: false
+
+txt <- content(res, "text")
+xml <- xml2::read_xml(txt)
+```
+
+The package `ows4R` was developed for working with OWS services.
+
+<iframe src="https://giphy.com/embed/m9Vsxp3Pbk0Bq" width="480" height="422" frameBorder="0" class="giphy-embed" allowFullScreen></iframe><p><a href="https://giphy.com/gifs/m9Vsxp3Pbk0Bq">via GIPHY</a></p>
+
+## File Formats
+
+File formats can either store vector or raster data, while spatial databases such as PostGIS can store both
+
+Goo - dal : the Geospatial Data Abstraction Library, provides access to more than 200 vector and raster data formats
+
+including ESRI shapefiles (multifile, limitations, proprietary), KML, GeoJSON, GPX, GeoTIFF (raster), and many more
+
+Open Geospatial Consortium (OGC), founded in 1994
+
+Open file formats of the kind endorsed by the OGC have several advantages over proprietary formats: 
+
+the standards are published, 
+ensure transparency and 
+open up the possibility for users to further develop and adjust the file formats to their specific needs
+
+<iframe src="https://giphy.com/embed/wa8uMtV7bmdGTGGmD7" width="480" height="386" frameBorder="0" class="giphy-embed" allowFullScreen></iframe><p><a href="https://giphy.com/gifs/nasa-history-nasa60th-nasahistory-wa8uMtV7bmdGTGGmD7">via GIPHY</a></p>
+
+## Data Input
+
+specifically, loading into RAM in the R session `.GlobalEnv`
+
+`sf::read_sf()`
+
+`terra::rast()`
+
+For my GDAL installation:
+
+```{r}
+#| label: Chapter8 vector input
+
+sf_drivers <- st_drivers()
+sf_drivers
+
+```
+
+### Vector Data
+
+`read_sf()` guesses the driver based on the file name extension
+
+```{r}
+#| label: Chapter8 vector input2
+
+f = system.file("shapes/world.gpkg", package = "spData")
+world <- read_sf(f, quiet = TRUE)
+
+```
+
+For some drivers, `dsn` could be provided as a folder name, access credentials for a database, or a `GeoJSON` string representation
+
+Some vector driver formats can store multiple data layers. By default, read_sf() automatically reads the first layer of the file specified in dsn; however, using the layer argument you can specify any other layer.
+
+`read_sf()` SQL features
+
+```{r}
+#| label: Chapter8 vector input3
+
+tanzania <- read_sf(f, query = 'SELECT * FROM world WHERE name_long = "Tanzania"')
+
+tanzania |>
+  ggplot(aes()) +
+  geom_sf()
+
+```
+
+If you do not know the names of the available columns, a good approach is to just read one row of the data with ` 'SELECT * FROM world WHERE FID = 1'`
+
+Well Known Text
+
+Another approach e need to prepare our “filter” by 
+(a) creating the buffer, 
+(b) converting the sf buffer object into an sfc geometry object with st_geometry(), and 
+(c) translating geometries into their well-known text representation with st_as_text()
+
+Our result, contains Tanzania and every country within its 0.2 arc degrees of buffer.
+
+```{r}
+#| label: Chapter8 vector input4
+
+tanzania_buf <- st_buffer(tanzania, 0.2)
+tanzania_buf_geom <- st_geometry(tanzania_buf)
+tanzania_buf_wkt <- st_as_text(tanzania_buf_geom)
+
+tanzania_neigh <- read_sf(f, wkt_filter = tanzania_buf_wkt)
+
+tanzania_neigh |>
+  ggplot(aes()) +
+  geom_sf() 
+
+# code knits to the correct map of East Africa
+# something fishy is happening with blogdown in building the book using a 50 km buffer. 
+
+```
+
+`read_sf()` also reads KML files. A KML file stores geographic information in XML format - a data format for the creation of web pages and the transfer of data in an application-independent way.  This file contains more than one layer
+
+
+```{r}
+#| label: Chapter8 vector input5
+
+u <- "https://developers.google.com/kml/documentation/KML_Samples.kml"
+download.file(u, "KML_Samples.kml")
+st_layers("KML_Samples.kml")
+
+kml <- read_sf("KML_Samples.kml", layer = "Placemarks")
+
+kml |>
+  ggplot(aes()) +
+  geom_sf() +
+  coord_sf()
+```
+
+<iframe src="https://giphy.com/embed/KDQ9Qp5sAplHwb3S0x" width="480" height="270" frameBorder="0" class="giphy-embed" allowFullScreen></iframe><p><a href="https://giphy.com/gifs/MarketingYellowZebra-yellowzebrasafaris-yellowzebra-safariexperts-KDQ9Qp5sAplHwb3S0x">via GIPHY</a></p>
+
+### Raster Data
+
+Raster data comes in many file formats with some of them supporting multilayer files.
+
+```{r}
+#| label: Chapter8 raster input1
+
+raster_filepath <- system.file("raster/srtm.tif", package = "spDataLarge")
+single_layer <- rast(raster_filepath)
+
+ggplot() +
+  tidyterra::geom_spatraster(data = single_layer) 
+```
+
+It also works in case you want to read a multilayer file.
+
+```{r}
+#| label: Chapter8 raster input2
+
+multilayer_filepath <- system.file("raster/landsat.tif", package = "spDataLarge")
+multilayer_rast <- rast(multilayer_filepath)
+
+multilayer_rast
+```
+
+All of the previous examples read spatial information from files stored on your hard drive. However, GDAL also allows reading data directly from online resources, such as HTTP/HTTPS/FTP web resources. 
+
+> add a /vsicurl/ prefix before the path to the file. 
+
+the global monthly snow probability at 500 m resolution for the period 2000-2012:
+
+```{r}
+#| label: Chapter8 raster input3
+
+myurl <- "/vsicurl/https://zenodo.org/record/5774954/files/clm_snow.prob_esacci.dec_p.90_500m_s0..0cm_2000..2012_v2.0.tif"
+snow <- rast(myurl)
+snow
+```
+
+Due to the fact that the input data is COG, we are actually not reading this file to our RAM, but rather creating a connection to it without obtaining any values. 
+
+We can get the snow probability for December in Reykjavik by specifying its coordinates and applying the `extract()` function
+
+```{r}
+#| label: Chapter8 raster input4
+
+rey <- data.frame(lon = -21.94, lat = 64.15)
+snow_rey <- terra::extract(snow, rey)
+snow_rey
+                                                      70
+```
+
+The `/vsicurl/` prefix also works not only for raster but also for vector file formats. It allows reading vectors directly from online storage with `read_sf()` just by adding the prefix before the vector file URL.
+
+`/vsicurl/` is not the only prefix provided by GDAL – many more exist, such as `/vsizip/` to read spatial files from ZIP archives without decompressing them beforehand or `/vsis3/` for on-the-fly reading files available in AWS S3 buckets. Learn more at [https://gdal.org/user/virtual_file_systems.html](https://gdal.org/user/virtual_file_systems.html)
+
+<iframe src="https://giphy.com/embed/SZfBTkwb2jx9C" width="480" height="270" frameBorder="0" class="giphy-embed" allowFullScreen></iframe><p><a href="https://giphy.com/gifs/house-lone-harbour-SZfBTkwb2jx9C">via GIPHY</a></p>
+
+## Data Output
+
+Writing geographic data allows you to convert from one format to another and to save newly created objects.
+
+Considerations
+
+- speed of writing the output to storage
+- size of the output object
+- speed of re-reading the object later
+- data type (vector or raster)
+- object class (geoTIFF, SpatRaster, etc)
+- layer structure within the file object
+
+`write_sf()` has an available parameter `append = TRUE`
+
+there is also `st_write()`, with different default parameters
+
+`writeRaster()` saves `SpatRaster` objects to storage, using FLT4S as the default data type, though this encoding be unecessarily large on some rasters
+
+There are seven other raster data types with different min / max precisions
+
+GeoTIFF files are written in `terra`, by default, with the **LZW compression**. 
+
+See the `terra` docs
+
+## Visual Outputs
+
+R supports many different static and interactive graphics formats. The most general method to save a static plot is to open a graphic device, create a plot, and close it
+
+```{r}
+#| label: Chapter8 visual output1
+#| eval: false
+
+png(filename = "lifeExp.png", width = 500, height = 350)
+plot(world["lifeExp"])
+dev.off()
+
+
+```
+
+Other available graphic devices include `pdf()`, `bmp()`, `jpeg()`, and `tiff()`.
+
+`tmap` has `tmap_save()`
+`mapview` has `mapshot()`
+
+Much more to come in the next chapter.
+
+## Exercises
+
+E1. List and describe three types of vector, raster, and geodatabase formats.
+
+- ESRI Shapefile **.shp** is a very popular proprietary vector format
+- KML **.kml** is a Google Earth open Vector format. When zipped it is **.kmz**
+- FlatGeobuf **.fgb** is a single file format for quick reading and streaming vector data
+
+- GeoTIFF **.tif/.tiff** is a popular open layered raster format
+- ArcASCII **.asc** is an open text format kind of like csv with a six line header
+- Geospatial **.pdf** is a raster and vector format 
+
+- GeoPackage is an OGC standard for a SQLite container
+
+E2. Name at least two differences between the sf functions `read_sf()` and `st_read()`.
+
+
+```
+
+st_read(
+  dsn,
+  layer,
+  ...,
+  query = NA,
+  options = NULL,
+  quiet = FALSE,
+  geometry_column = 1L,
+  type = 0,
+  promote_to_multi = TRUE,
+  stringsAsFactors = sf_stringsAsFactors(),
+  int64_as_string = FALSE,
+  check_ring_dir = FALSE,
+  fid_column_name = character(0),
+  drivers = character(0),
+  wkt_filter = character(0),
+  optional = FALSE
+)
+
+read_sf(..., quiet = TRUE, stringsAsFactors = FALSE, as_tibble = TRUE)
+
+```
+
+E3. Read the cycle_hire_xy.csv file from the spData package as a spatial object (Hint: it is located in the misc folder). What is a geometry type of the loaded object?
+
+These are points
+
+```{r}
+#| label: Chapter8 exercise3
+
+cycle_hire <- system.file("misc/cycle_hire_xy.csv", package = "spData")
+
+cycle_hire_csv <- readr::read_csv(cycle_hire)
+
+cycle_hire_csv
+
+```
+
+
+E4. Download the borders of Germany using `rnaturalearth`, and create a new object called `germany_borders`. Write this new object to a file of the GeoPackage format.
+
+```{r}
+#| label: Chapter8 exercise4
+#| eval: false
+
+germany_borders <- rnaturalearth::ne_countries(country = "Germany")
+
+write_sf(obj = germany_borders, dsn = "germany.gpkg")
+
+```
+
+
+E5. Download the global monthly minimum temperature with a spatial resolution of five minutes using the `geodata` package. Extract the June values, and save them to a file named tmin_june.tif file (hint: use terra::subset()).
+
+```{r}
+#| label: Chapter8 exercise5
+#| eval: false
+
+worldclim_tmin <- geodata::worldclim_global("tmin", res = 5, path = tempdir())
+
+worldclim_tmin_june <- terra::subset(worldclim_prec, subset = "wc2.1_5m_tmin_06")
+              
+terra::writeRaster(worldclim_tmin_june, "tmin_june.tif")
+
+```
+
+
+E6. Create a static map of Germany’s borders, and save it to a PNG file.
+
+```{r}
+#| label: Chapter8 exercise6
+#| eval: false
+
+germany_borders <- rnaturalearth::ne_countries(country = "Germany")
+
+png(filename = "germany.png", width = 500, height = 350)
+plot(germany_borders)
+dev.off()
+
+```
+
+E7. Create an interactive map using data from the cycle_hire_xy.csv file. Export this map to a file called cycle_hire.html.
+
+```{r}
+#| label: Chapter8 exercise7
+#| eval: false
+
+cycle_hire <- system.file("misc/cycle_hire_xy.csv", package = "spData")
+
+cycle_hire_csv <- readr::read_csv(cycle_hire)
+
+library(mapview)
+mapview_obj <- mapview(cycle_hire_csv, xcol = "X", ycol = "Y", zcol = "nbikes", legend = TRUE)
+
+mapview_obj
+
+mapshot(mapview_obj, file = "cycle_hire.html")
+  
+
+```
+
 
 ## Meeting Videos
 
 ### Cohort 1
 
-`r knitr::include_url("https://www.youtube.com/embed/URL")`
+`r knitr::include_url("https://www.youtube.com/embed/iTsKhe-Yleg")`
 
 <details>
 <summary> Meeting chat log </summary>
 
 ```
-LOG
+00:22:54    Olivier Leroy:    I like this tutorial: https://learnosm.org/en/
+00:23:57    Olivier Leroy:    I think google API is around 0.06 per address
+00:24:44    Olivier Leroy:    Tidygeocoader has more than one engine
+00:30:27    Olivier Leroy:    From 1995 if I am correct
+00:31:39    Olivier Leroy:    OGC also have standard for sensor for example
+00:36:38    Olivier Leroy:    The layers can be find in geopackage for example, it use SQLlite so you can use SQL
+00:37:44    Olivier Leroy:    Is it in m ?
 ```
 </details>
