@@ -17,6 +17,7 @@ Imports:
     spData,
     spDataLarge,
     terra,
+    tidyterra,
     tidyverse
 Remotes:
     geocompx/geocompkg,
