@@ -417,7 +417,7 @@ A unique feature of mapdeck is its provision of interactive '2.5d' perspectives
 
 `leaflet` which is the most mature and widely used interactive mapping package in R. `leaflet` provides a relatively low-level interface to the Leaflet JavaScript library. Here is the `leaflet` package in action, showing cycle hire points in London.
 
-```{r}
+```{r, eval = FALSE}
 pal = colorNumeric("RdYlBu", domain = cycle_hire$nbikes)
 leaflet(data = cycle_hire) |> 
   addProviderTiles(providers$CartoDB.Positron) |>
@@ -427,6 +427,15 @@ leaflet(data = cycle_hire) |>
   setView(lng = -0.1, 51.5, zoom = 12) |> 
   addMiniMap()
 ```
+
+<div class="figure" style="text-align: center">
+<span style="display:block;" id="fig:leaflet_example"></span>
+<iframe src="https://geocompr.github.io/img/leaflet.html" data-external="1" width="690" height="400px">
+</iframe>
+<p class="caption">
+FIGURE 9.23: The leaflet package in action, showing cycle hire points in London.
+</p>
+</div>
 
 
 ## Shiny
