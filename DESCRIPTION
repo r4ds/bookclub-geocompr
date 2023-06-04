@@ -10,10 +10,24 @@ Depends:
 Imports: 
     bookdown,
     colorspace,
+    data.table,
+    dplyr,
+    future,
     geocompkg,
+    ggplot2,
     grid,
+    lgr,
     lwgeom,
     mapview,
+    mlr3,
+    mlr3learners,
+    mlr3spatiotempcv,
+    mlr3tuning,
+    mlr3viz,
+    paradox,
+    pROC,
+    progressr,
+    ranger,
     rmarkdown,
     sf,
     sfheaders,
@@ -22,7 +36,9 @@ Imports:
     terra,
     tidyterra,
     tidyverse,
-    tmap
+    tmap,
+    tree,
+    vegan
 Remotes:
     geocompx/geocompkg,
     mtennekes/tmap
