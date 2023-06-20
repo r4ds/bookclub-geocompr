@@ -216,12 +216,16 @@ cat_raster
 
 ### Cohort 1
 
-`r knitr::include_url("https://www.youtube.com/embed/URL")`
+`r knitr::include_url("https://www.youtube.com/embed/RuvLbpyrDmU")`
 
 <details>
 <summary> Meeting chat log </summary>
 
 ```
-LOG
+00:17:17	Derek Sollberger:	https://epsg.io/4326
+00:28:10	Derek Sollberger:	Is S2 a type of object-oriented programming?
+00:36:35	Derek Sollberger:	https://crs-explorer.proj.org/
+00:36:54	Jim Gruman:	Reacted to "https://crs-explorer..." with 👍🏼
+00:44:36	Derek Sollberger:	I have seen "Mollweide" in a few places for displaying the entire Earth.  What is the motivation for that projection?
 ```
 </details>

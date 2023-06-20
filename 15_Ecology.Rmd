@@ -332,12 +332,29 @@ all(values(pred - pred_2) == 0)
 
 ### Cohort 1
 
-`r knitr::include_url("https://www.youtube.com/embed/URL")`
+`r knitr::include_url("https://www.youtube.com/embed/ozXzmWtv1_g")`
 
 <details>
 <summary> Meeting chat log </summary>
-
 ```
-LOG
+00:03:35	Olivier Leroy:	Turn off the mic as we put a kid to bed and he is not happy
+00:04:05	Olivier Leroy:	Hurray! For completing the book!
+00:04:55	Olivier Leroy:	I will ask if Robin or Jakub want to be here for one session
+00:05:05	Olivier Leroy:	start
+00:07:52	Olivier Leroy:	Way more 😛
+00:09:08	Olivier Leroy:	It is an R package
+00:09:29	Olivier Leroy:	https://www.rayshader.com/
+00:14:13	Olivier Leroy:	`Type` is because  we do not want it in odd ratio no?
+00:18:09	Olivier Leroy:	Mlr3 is way more present in Europe than tidymodel
+00:18:18	Olivier Leroy:	Before it was all caret
+00:18:52	Olivier Leroy:	(You also have it in tidymodel since last summer I think)
+00:23:13	Olivier Leroy:	Slope and ctplan a bit
+00:28:14	Olivier Leroy:	Was it because our previous model were overconfident ?
+00:29:10	Olivier Leroy:	Good job debugging all of that!
+00:31:24	Olivier Leroy:	Very scary: terminator
+00:56:50	Olivier Leroy:	Did not know about the `pretty` argument
+00:58:45	Olivier Leroy:	Nice seed
+01:02:11	Tony Vota:	Sounds good.
+01:02:48	Tony Vota:	Thanks Derek.  Nice work as always.  A bit over my head - but I pick up a few things here and there
 ```
 </details>
