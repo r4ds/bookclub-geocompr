@@ -13,12 +13,37 @@
 
 ### Cohort 1
 
-`r knitr::include_url("https://www.youtube.com/embed/URL")`
+`r knitr::include_url("https://www.youtube.com/embed/1PoOLfWxiAU")`
 
 <details>
 <summary> Meeting chat log </summary>
-
 ```
-LOG
+00:08:11	Olivier Leroy:	start
+00:17:50	Derek Sollberger (he/his):	The Spatial R book also goes over this Bristol case study, but also normalizes the calculations (by area or by population)
+00:18:50	Olivier Leroy:	Reacted to "The Spatial R book a..." with 👍
+00:20:50	Olivier Leroy:	I just realize it was origine destination 2 lines
+00:20:58	Olivier Leroy:	realized*
+00:21:46	Derek Sollberger (he/his):	yeah, these geospatial authors really like short variable names
+00:24:27	Olivier Leroy:	It would become very heavy on computation
+00:30:49	Derek Sollberger (he/his):	so, does making desire lines reduce path-finding computation?
+00:35:18	Olivier Leroy:	Replying to "so, does making desi..."
+
+My guess is yes because you just calculate one way and not lets say the five shortest one
+00:44:00	Derek Sollberger (he/his):	I like these case studies (reminds me of city planning courses)
+00:44:12	Olivier Leroy:	Reacted to "I like these case st..." with 👍
+00:45:22	Olivier Leroy:	Older 😛
+00:46:32	Olivier Leroy:	Why do all gov agency are using this old tricks of negative value for na
+00:47:15	Derek Sollberger (he/his):	To be fair, many of us R programmers barely really know what NA, NULL, etc. are
+00:47:35	Olivier Leroy:	And all the NA_ 😛
+00:50:37	Olivier Leroy:	Dusseldorf is large!
+00:51:59	Derek Sollberger (he/his):	The German regions are nuts!
+https://en.wikipedia.org/wiki/NUTS_statistical_regions_of_Germany
+00:52:05	Olivier Leroy:	OSM is so good in Germany, so many mappers
+00:52:31	Derek Sollberger (he/his):	Reacted to "OSM is so good in Ge..." with 😻
+00:55:18	Olivier Leroy:	Raster here save a lot of calculation
+00:57:38	Olivier Leroy:	H3 indexes also
+00:59:54	Tony Vota:	I have used the gistackexchange site with success
+01:00:00	Olivier Leroy:	Reacted to "I have used the gist..." with 👍
+01:08:59	Olivier Leroy:	end
 ```
 </details>

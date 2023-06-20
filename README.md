@@ -10,7 +10,7 @@ As we read, we are producing [notes about the book](https://r4ds.io/geocompr).
 
 If you would like to present, please see the sign-up sheet for your cohort (linked below, and pinned in the [#book_club-geocompr](https://rfordatascience.slack.com/archives/C04KZ1ZBG74) channel on Slack)!
 
-- [Cohort 1](https://docs.google.com/spreadsheets/d/1FApeBJuApgklw1pjJdBp9fKm58wtyBvsBxWJOEBgN4U/edit#gid=0) (started 2023-02-27): [Mondays, 19:00 CST/CDT](https://www.timeanddate.com/worldclock/converter.html?iso=20230228T010000&p1=24&p2=179&p3=1440) | [meeting videos](https://youtube.com/playlist?list=PL3x6DOfs2NGju1IQd7gZ1Zmq-Y23uBX37)
+- Cohort 1 (started 2023-02-27, finished 2023-06-19): [meeting videos](https://youtube.com/playlist?list=PL3x6DOfs2NGju1IQd7gZ1Zmq-Y23uBX37)
 
 <hr>
 

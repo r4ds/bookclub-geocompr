@@ -655,12 +655,28 @@ plot(terra::resample(dem, y = target_rast,
 
 ### Cohort 1
 
-`r knitr::include_url("https://www.youtube.com/embed/URL")`
+`r knitr::include_url("https://www.youtube.com/embed/zM4X1TS_EyU")`
 
 <details>
 <summary> Meeting chat log </summary>
 
 ```
-LOG
+00:04:05	Oluwafemi Oyedele:	Hi Tony!!!
+00:04:17	Tony Vota:	Hi All
+00:04:27	Derek Sollberger:	good afternoon
+00:16:25	Olivier Leroy:	https://github.com/mbloch/mapshaper
+00:18:35	Olivier Leroy:	New York Times journalist
+00:20:52	Olivier Leroy:	https://en.wikipedia.org/wiki/Deception_Island an example were the centroid will give you a bad result :P
+00:28:11	Olivier Leroy:	st_point_on_surface is the function that deal with centroid were point still need to be in the polygon
+00:29:01	Olivier Leroy:	They are great!
+00:29:16	Tony Vota:	Reacted to "They are great!" with 👍
+00:29:25	Jonathan V. Solórzano Villegas:	yup, nice animations!
+00:37:38	Olivier Leroy:	https://en.wikipedia.org/wiki/Modifiable_areal_unit_problem
+00:44:06	Olivier Leroy:	Very useful in network: road/broadband infra/river etc
+00:55:15	Jim Gruman:	thank you Derek. The animations were awesome
+00:55:21	Tony Vota:	Great presentation.  Very clear.  Thanks!
+01:00:38	Olivier Leroy:	https://github.com/r-spatial/sf/blob/7c860ccc5db719f04ed8c29a39595b46f6b3aad1/tests/cast.R
+01:01:26	Olivier Leroy:	https://github.com/r-spatial/sf/blob/0b3d26f7ac8efd4a969d53c26bbb3d47d97a0829/R/cast_sfg.R
+01:04:19	Olivier Leroy:	MULTIPOINT = st_multipoint(Tail1(unclass(x))[[1L]]),
 ```
 </details>

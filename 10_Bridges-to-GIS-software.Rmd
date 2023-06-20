@@ -13,12 +13,12 @@
 
 ### Cohort 1
 
-`r knitr::include_url("https://www.youtube.com/embed/URL")`
+`r knitr::include_url("https://www.youtube.com/embed/m6yKmEUdm2A")`
 
 <details>
 <summary> Meeting chat log </summary>
-
 ```
-LOG
+00:19:47	Derek Sollberger (he/his):	I myself hadn't seen GRASS before
+00:58:28	Derek Sollberger (he/his):	haha, how did CRAN ever approve a huge help file?
 ```
 </details>

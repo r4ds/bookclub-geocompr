@@ -606,12 +606,18 @@ Create Maps and Visualize Data in 2D and 3D
 
 ### Cohort 1
 
-`r knitr::include_url("https://www.youtube.com/embed/URL")`
+`r knitr::include_url("https://www.youtube.com/embed/fTv0vKC3vLU")`
 
 <details>
 <summary> Meeting chat log </summary>
 
 ```
-LOG
+00:26:24	Olivier Leroy:	New Zealand Dollar
+00:40:36	Jim Gruman:	shift_geometry() in tigris
+00:40:45	Olivier Leroy:	Reacted to "shift_geometry() in ..." with 👍
+00:40:48	Jim Gruman:	according to Kyle Walker
+00:41:53	Olivier Leroy:	I used it (it works 🙂 ) I thinks jt reproject Alaska and Hawaii then move them while trap do an inset map
+00:57:39	Olivier Leroy:	https://www.paulamoraga.com/tutorial-maps/
+01:01:32	Ryan:	Great topics. Thank you.
 ```
 </details>

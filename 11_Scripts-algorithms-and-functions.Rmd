@@ -13,12 +13,20 @@
 
 ### Cohort 1
 
-`r knitr::include_url("https://www.youtube.com/embed/URL")`
+`r knitr::include_url("https://www.youtube.com/embed/4Vr1R-Ur6xA")`
 
 <details>
 <summary> Meeting chat log </summary>
 
 ```
-LOG
+00:07:44	Derek Sollberger (he/his):	resource for starting to volunteer to gather data?
+00:10:12	Olivier Leroy:	https://wiki.openstreetmap.org/wiki/StreetComplete
+00:10:32	Olivier Leroy:	Go map!!
+00:10:45	Olivier Leroy:	vespuci
+00:14:54	Olivier Leroy:	Start
+00:18:03	Derek Sollberger (he/his):	https://books.ropensci.org/targets/
+00:18:10	Olivier Leroy:	Reacted to "https://books.ropens..." with 👍
+00:42:05	Olivier Leroy:	s3
+00:53:39	Olivier Leroy:	End
 ```
 </details>
