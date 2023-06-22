@@ -1,24 +1,335 @@
 # Geomarketing
 
-**Learning objectives:**
+People are fundamental to location analysis, in particular where they are likely to spend their time and other resources.
 
-- THESE ARE NICE TO HAVE BUT NOT ABSOLUTELY NECESSARY
+Humans tend to congregate in certain places, creating economic niches (and high land prices).
 
-## SLIDE 1
+The main task of location analysis is to find out, based on available data, where such ‘optimal locations’ are for specific services.
 
-- ADD SLIDES AS SECTIONS (`##`).
-- TRY TO KEEP THEM RELATIVELY SLIDE-LIKE; THESE ARE NOTES, NOT THE BOOK ITSELF.
+Typical research questions include:
+
+- Where do target groups live and which areas do they frequent?
+- Where are competing stores or services located?
+- How many people can easily reach specific stores?
+- Do existing services over- or under-utilize the market potential?
+- What is the market share of a company in a specific area?
+
+```{r}
+#| label: 14 setup
+
+library(sf)
+library(dplyr)
+library(ggplot2)
+library(purrr)
+library(terra)
+library(osmdata)
+library(spDataLarge)
+library(tmap)
+library(mapview)
+
+tmap_mode("plot")
+```
+
+## Case Study: Bike Shops in Germany
+
+We are starting a new chain, near as many potential customers as possible.
+
+Our target audience must include males age 20-40.
+
+Where should the stores be placed?
+
+## Tidy input data
+
+The German government provides gridded census data at either 1 km or 100 m resolution. The following code chunk downloads, unzips and reads in the 1 km data.
+
+```{r}
+#| label: 14 input data
+
+download.file("https://tinyurl.com/ybtpkwxz", 
+              destfile = "census.zip", mode = "wb")
+
+unzip("census.zip") # unzip the files
+
+input_tidy <-
+  readr::read_csv2(list.files(pattern = "Gitter.csv")) |>
+  select(
+    x = x_mp_1km,
+    y = y_mp_1km,
+    pop = Einwohner,
+    women = Frauen_A,
+    mean_age = Alter_D,
+    hh_size = HHGroesse_D
+  ) |>
+  dplyr::mutate(dplyr::across(
+                  .cols = c(pop, women, mean_age, hh_size),
+                  .fns =  ~ ifelse(.x %in% c(-1,-9), NA, .x)
+                ))
+
+summary(input_tidy)
+```
+
+## Create census rasters
+
+The `x` and `y` from the input file correspond to a 1000 x 1000 square meter unit grid.
+
+```{r}
+#| label: 14 create rasters
+
+(input_ras <- terra::rast(input_tidy, type = "xyz", crs = "EPSG:3035"))
+
+ger <- geodata::gadm(country = "DEU", level = 0, path = tempdir())
+
+ger <- st_as_sf(terra::project(ger, crs(input_ras)))
+
+tm_shape(input_ras) +
+  tm_raster(style = "cat", palette = "GnBu", title = "Class") +
+  tm_facets(nrow = 1) +
+  tm_shape(ger) +
+  tm_borders() +
+  tm_layout(panel.labels = c("population", "women", "mean age", "household size"),
+            legend.outside.size = 0.08)
+```
+
+The next stage is to reclassify the values of the rasters stored in input_ras in accordance with the survey mentioned above, using the terra function `classify()`
+
+In the case of the population data, we convert the classes into a numeric data type using class means. 
+
+Raster cells are assumed to have a population of 127 if they have a value of 1 (the middle of the categorical bin)
+
+The remaining variables are re-classified as weights corresponding with weights used in the survey. 
+
+Class 1 in the variable women represents areas in which 0 to 40% of the population is female; these are reclassified with a comparatively high weight of 3 because the target demographic is predominantly male. Similarly, the classes containing the youngest people and highest proportion of single households are reclassified to have high weights.
+
+```{r}
+#| label: 14 weightings
+
+rcl_pop <- matrix(c(1, 1, 127, 2, 2, 375, 3, 3, 1250, 
+                   4, 4, 3000, 5, 5, 6000, 6, 6, 8000), 
+                 ncol = 3, byrow = TRUE)
+
+rcl_women <- matrix(c(1, 1, 3, 2, 2, 2, 3, 3, 1, 4, 5, 0), 
+                   ncol = 3, byrow = TRUE)
+
+rcl_age <- matrix(c(1, 1, 3, 2, 2, 0, 3, 5, 0),
+                 ncol = 3, byrow = TRUE)
+
+rcl_hh <- rcl_women
+
+rcl <- list(rcl_pop, rcl_women, rcl_age, rcl_hh)
+
+reclass <- input_ras
+
+for (i in seq_len(terra::nlyr(reclass))) {
+  reclass[[i]] = terra::classify(x = reclass[[i]], rcl = rcl[[i]], right = NA)
+}
+
+names(reclass) <- names(input_ras)
+
+reclass
+```
+
+## Define metropolitan areas
+
+We define metropolitan areas here as pixels of 20 km2 inhabited by more than 500,000 people
+
+
+```{r}
+#| label: 14 Urban
+
+pop_agg <- terra::aggregate(reclass$pop, fact = 20, fun = sum, na.rm = TRUE)
+
+pop_agg <- pop_agg[pop_agg > 500000, drop = FALSE] 
+
+summary(pop_agg)
+
+metros <- pop_agg |> 
+  terra::patches(directions = 8) |>
+  terra::as.polygons() |>
+  sf::st_as_sf()
+
+metros$names = c("Hamburg", "Berlin", "Düsseldorf", "Leipzig",
+                 "Frankfurt am Main", "Nürnberg", "Stuttgart", "München")
+
+metros_points <- st_centroid(metros)
+
+tm_shape(pop_agg/1000) +
+  tm_raster(palette = "GnBu",
+            title = "Number of people\n(in 1,000)") +
+  tm_shape(ger) +
+  tm_borders() +
+  tm_shape(metros) +
+  tm_borders(col = "gold", lwd = 2) +
+  tm_shape(metros_points) +
+  tm_text(text = "names", ymod = 0.6, shadow = TRUE, size = 0.75,
+          fontface = "italic") +
+  tm_layout(legend.outside = TRUE, legend.outside.size = 0.3)
+```
+
+We could also reverse geocode for the city names
+
+```{r}
+#| label: 14 reverse geocode
+
+metro_names <- sf::st_centroid(metros, of_largest_polygon = TRUE) |>
+  tmaptools::rev_geocode_OSM(as.data.frame = TRUE) |>
+  select(city, town, state)
+
+metro_names <- dplyr::mutate(metro_names, city = ifelse(is.na(city), town, city))
+
+metro_names
+```
+
+
+## Points of interest
+
+poi (Points of Interest)
+
+The `osmdata` package provides easy-to-use access to Open Street Map data
+
+Caution:  even filtering for metro areas in Germany, this query operates on 2Gb of data.
+
+```{r eval=FALSE}
+#| label: 14 osmdata import
+
+shops <- purrr::map(metro_names, function(x) {
+  message("Downloading shops of: ", x, "\n")
+
+  Sys.sleep(sample(seq(5, 10, 0.1), 1))
+  query = osmdata::opq(x) |>
+    osmdata::add_osm_feature(key = "shop")
+  points = osmdata::osmdata_sf(query)
+
+  iter = 2
+  while (nrow(points$osm_points) == 0 && iter > 0) {
+    points = osmdata_sf(query)
+    iter = iter - 1
+  }
+
+  points$osm_points
+})
+
+# checking if we have downloaded shops for each metropolitan area
+ind = purrr::map_dbl(shops, nrow) == 0
+if (any(ind)) {
+  message("There are/is still (a) metropolitan area/s without any features:\n",
+          paste(metro_names[ind], collapse = ", "), "\nPlease fix it!")
+}
+
+# select only specific columns
+shops = purrr::map_dfr(shops, select, osm_id, shop)
+
+```
+
+We will just use the convenient sample dataset with features in each of the metro areas.
+
+```{r}
+#| label: 14 osmdata sample from spDataLarge
+
+data("shops", package = "spDataLarge")
+
+shops |> 
+  ggplot() +
+  geom_sf(alpha = 0.01, shape = 20) +
+  theme_minimal()
+```
+
+This spatial point object must be converted into a raster 
+
+```{r}
+#| label: 14 convert shops to a raster
+
+shops <- sf::st_transform(shops, st_crs(reclass))
+
+poi <- terra::rasterize(x = shops, y = reclass, field = "osm_id", fun = "length")
+```
+
+As with the other raster layers (population, women, mean age, household size) the poi raster is reclassified into four classes.  Here again, some judgement is needed.
+
+The authors choose the Fisher-Jenks natural breaks approach which minimizes within-class variance, the result of which provides an input for the reclassification matrix.
+
+```{r}
+#| label: 14 shops reclassification
+
+int <- classInt::classIntervals(terra::values(poi), n = 4, style = "fisher")
+
+int <- round(int$brks)
+
+rcl_poi <- matrix(c(int[1], rep(int[-c(1, length(int))], each = 2),
+                    int[length(int)] + 1), ncol = 2, byrow = TRUE)
+
+rcl_poi <- cbind(rcl_poi, 0:3)  
+
+poi <- terra::classify(poi, rcl = rcl_poi, right = NA) 
+
+names(poi) = "poi"
+
+poi
+```
+
+## Identifying suitable locations
+
+Our last step: add `poi` to the reclass raster stack and remove the population layer from it. 
+
+The reasoning: 
+First of all, we have already delineated metropolitan areas, that is areas where the population density is above average compared to the rest of Germany. 
+
+Second, though it is advantageous to have many potential customers within a specific catchment area, the sheer number alone might not actually represent the desired target group. For instance, residential tower blocks are areas with a high population density but not necessarily with a high purchasing power for expensive cycle components.
+
+```{r}
+#| label: 14 remove population raster and add poi 
+
+reclass2 <- reclass[[names(reclass) != "pop"]] |>
+  c(poi)
+
+plot(reclass2)
+```
+
+the final step — calculating a final score by summing the scoring across all of the raster layers
+
+```{r}
+#| label: 14 sum of scores
+
+(result <- sum(reclass2))
+
+# have a look at suitable bike shop locations in Berlin
+berlin <- metros[metro_names == "Berlin", ]
+
+berlin_raster <- terra::crop(result, berlin) 
+
+berlin_raster <- berlin_raster > 9
+
+berlin_raster[berlin_raster == 0] = NA
+
+mapviewOptions(fgb = FALSE)
+
+mapview(raster::raster(berlin_raster), col.regions = c(NA, "darkgreen"),
+            na.color = "transparent", legend = TRUE, map.type = "OpenStreetMap")
+```
+
+For instance, a score greater than 9 might be a suitable threshold indicating raster cells where a bike shop could be placed
 
 ## Meeting Videos
 
 ### Cohort 1
 
-`r knitr::include_url("https://www.youtube.com/embed/URL")`
+`r knitr::include_url("https://www.youtube.com/embed/1PoOLfWxiAU")`
 
 <details>
 <summary> Meeting chat log </summary>
 
 ```
-LOG
+Cohort1 reviewed Transportation, Geomarketing, and Conclusion together 
+
+00:47:35    Olivier Leroy:    And all the NA_ 😛
+00:50:37    Olivier Leroy:    Dusseldorf is large!
+00:51:59    Derek Sollberger (he/his):    The German regions are nuts!
+https://en.wikipedia.org/wiki/NUTS_statistical_regions_of_Germany
+00:52:05    Olivier Leroy:    OSM is so good in Germany, so many mappers
+00:52:31    Derek Sollberger (he/his):    Reacted to "OSM is so good in Ge..." with 😻
+00:55:18    Olivier Leroy:    Raster here save a lot of calculation
+00:57:38    Olivier Leroy:    H3 indexes also
+00:59:54    Tony Vota:    I have used the gistackexchange site with success
+01:00:00    Olivier Leroy:    Reacted to "I have used the gist..." with 👍
+01:08:59    Olivier Leroy:    end
 ```
 </details>

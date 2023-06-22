@@ -1,24 +1,532 @@
 # Transportation
 
-**Learning objectives:**
+> Everything is related to everything else, but near things are more related than distant things. - Waldo Tobler
 
-- THESE ARE NICE TO HAVE BUT NOT ABSOLUTELY NECESSARY
 
-## SLIDE 1
+<details>
+<summary>Abstract</summary>
+Transport technologies are disruptive, changing spatial relationships between geographic entities including mobile humans and goods: “the purpose of transportation is to overcome space”
 
-- ADD SLIDES AS SECTIONS (`##`).
-- TRY TO KEEP THEM RELATIVELY SLIDE-LIKE; THESE ARE NOTES, NOT THE BOOK ITSELF.
+This chapter introduces the geographic analysis of transport systems at different geographic levels, including Areal units, Desire lines, Nodes, Routes, Route networks, and agents.
+
+Transport systems are dynamic, where scenarios of change must be modeled, simplifying the complexity of these spatio-temporal systems in ways that capture their essential characteristics.
+
+Typically, models are designed to tackle a particular problem, such as how to improve safety or the environmental performance of transport systems. 
+
+</details>
+
+```{r }
+#| label: 13 setup
+library(sf)
+library(dplyr)
+library(spDataLarge)
+library(stplanr)      # for processing geographic transport data
+library(tmap)         # map making (see Chapter 9)
+library(ggplot2)      # data visualization package
+library(sfnetworks)   # spatial network classes and functions 
+
+tmap_mode("plot")
+```
+
+## Bristol Case Study
+
+How do we increase cycling in the city of Bristol? 
+
+An overview of the region’s transport network:
+
+```{r}
+#| label: 13 Bristol map
+
+region_all <- rbind(bristol_region, bristol_ttwa)
+
+tm_shape(region_all[1, ], bbox = region_all) +
+  tm_fill("yellow", alpha = 0.5) +
+  tm_shape(bristol_ways) +
+  tm_lines(col = "highway", lwd = 2.1, palette = "-Set1") +
+  tm_scale_bar() +
+  tm_shape(region_all) +
+  tm_borders(col = "black") +
+  tm_basemap(server = leaflet::providers$Esri.WorldTopoMap)
+```
+
+This chapter is guided by the need to provide evidence for stakeholders tasked with getting people out of cars and onto more sustainable modes — walking and cycling in particular. 
+
+The simplest way to define a study area is often the first matching boundary returned by OpenStreetMap. For Bristol, a detailed polygon is returned. See the inner blue boundary
+
+But there are a couple of issues with this approach:
+
+- The first OSM boundary returned by OSM may not be the official boundary used by local authorities
+- Even if OSM returns the official boundary, this may be inappropriate for transport research because they bear little relation to where people travel
+
+We will talk about the much larger Travel To Work Area in the next section.
+
+## Transport Zones
+
+Two zone types are of particular interest to transport researchers: origin and destination zones
+
+Different zoning systems, such as ‘Workplace Zones’, may be appropriate to represent the increased density of trip destinations in areas with many ‘trip attractors’ such as schools and shops.
+
+Travel to Work Areas (TTWAs) create a zoning system analogous to hydrological watersheds. 
+
+There are 102 TTWA zones in our dataset.
+
+`bristol_od` has more rows than `bristol_zones` because it represents travel between zones
+
+The `o` column is origin and the `d` is destination
+
+```{r}
+#| label: 13 travel datasets
+
+nrow(bristol_od)
+
+names(bristol_od)
+
+nrow(bristol_zones)
+
+zones_attr <- bristol_od |> 
+  group_by(o) |> 
+  summarize(across(where(is.numeric), sum)) |> 
+  dplyr::rename(geo_code = o)
+
+zones_attr
+
+```
+
+```{r}
+#| label: 13 the join
+
+zones_joined <- bristol_zones |> 
+    left_join(zones_attr, by = "geo_code")
+
+sum(zones_joined$all)
+
+names(zones_joined)
+
+```
+
+The result contains columns representing the total number of trips originating in each zone and their mode of travel (by bicycle, foot, car and train). 
+
+Most zones have between 0 and 4,000 trips originating from them.
+
+Low trip numbers in the outskirts of the region might be explained by the fact that many people in these peripheral zones will travel to other regions outside of the study area. 
+
+
+
+```{r}
+#| label: 13 aggregate by any mode
+
+zones_destinations <- bristol_od |> 
+  group_by(d) |> 
+  summarize(across(where(is.numeric), sum)) |> 
+  select(geo_code = d, all_dest = all)
+
+zones_od = zones_joined |> 
+  inner_join(zones_destinations, by = "geo_code")
+
+tm_shape(zones_od) +
+  tm_fill(
+    c("all", "all_dest"),
+    palette = viridis::plasma(4),
+    breaks = c(0, 2000, 4000, 10000, 50000),
+    title = "Trips"
+  )  +
+  tm_borders(col = "black", lwd = 0.5) +
+  tm_facets(free.scales = FALSE, ncol = 2) +
+  tm_layout(panel.labels = c("Zone of origin", "Zone of destination"))
+```
+
+## Desire Lines
+
+Desire lines connect origins and destinations, representing where people desire to go, typically between zones.  They are often represented conveniently using zone centroids.  Let's just use the top 10:
+
+```{r}
+#| label: 13 top 10 desire lines
+
+(od_top10 <- bristol_od |> 
+  dplyr::slice_max(all, n = 10))
+
+
+```
+
+Walking is the most popular mode of transport among the top pairs
+
+E02003043 is a popular destination (city center)
+
+Also, intrazonal city center is number one
+
+he percentage of each desire line that is made by these active modes:
+
+```{r}
+#| label: 13 percentage by each
+
+(bristol_od <- bristol_od |> 
+  mutate(Active = (bicycle + foot) / all * 100))
+
+```
+
+Let's separate *interzonal* from *intrazonal*
+
+```{r}
+#| label: 13 separate inter from intra
+
+od_intra <- dplyr::filter(bristol_od, o == d)
+od_inter <- dplyr::filter(bristol_od, o != d)
+```
+
+The next step is to convert the interzonal OD pairs into an `sf` object 
+
+For real-world use one should use centroid values generated from projected data or, preferably, use *population-weighted* centroids
+
+```{r}
+#| label: 13 stplanr
+
+desire_lines <- od2line(od_inter, zones_od) # creates centroids
+
+desire_lines_top10 <- od2line(od_top10, zones_od)
+
+tm_shape(desire_lines) +
+  tm_lines(palette = "plasma", breaks = c(0, 5, 10, 20, 40, 100),
+    lwd = "all",
+    scale = 9,
+    title.lwd = "Number of trips",
+    alpha = 0.1,           # lightened to help emphasize the top 10
+    col = "Active",
+    title = "Active travel (%)"
+  ) +
+  tm_shape(desire_lines_top10) +
+  tm_lines(lwd = 5, col = "green", alpha = 0.7) +
+  tm_scale_bar()
+
+```
+
+The map shows that the city center dominates transport patterns in the region, suggesting policies should be prioritized there, although a number of peripheral sub-centers can also be seen.
+
+## Nodes
+
+Nodes are points. Broadly are two main types of transport nodes:
+
+- Origins and destinations such as houses and workplaces
+- Intersections between pathways (junctions) and points for entering or exiting a transport network such as bus stops and train stations
+
+The network then consists of edges and nodes.
+
+A common barrier preventing people from switching away from cars for commuting to work is that the distance from home to work is too far to walk or cycle. Public transport can reduce this barrier by providing a fast and high-volume option for common routes into cities. From an active travel perspective, public transport ‘legs’ of longer journeys divide trips into three:
+
+- The origin leg, typically from residential areas to public transport stations
+- The public transport leg, which typically goes from the station nearest a trip’s origin to the station nearest its destination
+- The destination leg, from the station of alighting to the destination
+
+Public transport nodes can be used to construct three-part desire lines for trips that can be taken by bus and rail. 
+
+Let's look at rail:
+
+```{r}
+#| label: 13 rail
+
+desire_rail = dplyr::slice_max(desire_lines, n = 10, order_by = train)
+```
+
+three stages: 
+- matrix creation (of origins, destinations and the ‘via’ points representing rail stations), 
+- identification of nearest neighbors 
+- conversion to multilinestrings. 
+
+Using the `stplanr` `line_via()` function
+
+```{r}
+#| label: 13 line_via
+
+(desire_rail <- line_via(desire_rail, bristol_stations))
+
+```
+
+Note each of the legs
+
+```{r}
+#| label: 13 line via plot
+
+zone_cents <- st_centroid(zones_od)
+zone_cents_rail <- zone_cents[desire_rail, ]
+bb <-  tmaptools::bb(desire_rail, ext = 1.1)
+
+desire_rail_plot = rbind(
+  st_sf(data.frame(Geometry = "Desire line (original)"), geometry = desire_rail$geometry),
+  st_sf(data.frame(Geometry = "Leg 1 (origin to station)"), geometry = desire_rail$leg_orig),
+  st_sf(data.frame(Geometry = "Leg 2 (station to station)"), geometry = desire_rail$leg_via),
+  st_sf(data.frame(Geometry = "Leg 3 (station to destination)"), geometry = desire_rail$leg_dest)
+) 
+
+desire_rail_plot = desire_rail_plot |> 
+  mutate(lty = case_when(Geometry == "Desire line (original)" ~ 2, TRUE ~ 1)) |> 
+  mutate(size = case_when(Geometry == "Desire line (original)" ~ 1, TRUE ~ 2))
+
+bristol_rail_points = rbind(
+  st_sf(data.frame(
+    Node = "Origin and destination locations",
+    col = "black"
+    ), geometry = zone_cents_rail$geometry),
+  st_sf(data.frame(
+    Node = "Public transport node",
+    col = "red"
+    ), geometry = bristol_stations$geometry)
+)
+
+tm_shape(desire_rail_plot, bbox = bb) +
+  tm_lines(col = "Geometry", palette = "Set2", lwd = "size", scale = 3, legend.lwd.show = FALSE) +
+  tm_shape(bristol_rail_points) +
+  tm_dots(col = "col", size = 0.05) +
+  tm_scale_bar()
+```
+
+## Routes
+
+We will add an additional layer of complexity by considering the built infrastructure.
+
+Routing engines can be multi-modal, or not. Transit policy studies really must be multi-modal. They generate *routes* (a multi-linestring geometry for each trip), *legs* (each mode within the route), and *segments* (an OpenStreetMap turn by turn event list).
+
+The more detail, the larger the file size.
+
+<details>
+<summary>In-memory routing</summary>
+Routing engines in R enable route networks stored as R objects in memory to be used as the basis of route calculation. Options include `sfnetworks`, `dodgr` and `cppRouting` packages.
+
+While fast and flexible, native R routing options are generally harder to set-up than dedicated routing engines for realistic route calculation. Routing is a hard problem and many hundreds of hours have been put into open source routing engines that can be downloaded and hosted locally. On the other hand, R-based routing engines may be well-suited to model experiments and the statistical analysis of the impacts of changes on the network. Changing route network characteristics (or weights associated with different route segment types), re-calculating routes, and analyzing results under many scenarios in a single language has benefits for research applications.
+
+</details>
+
+<details>
+<summary>Locally hosted dedicated routing engines</summary>
+Locally hosted routing engines include OpenTripPlanner, Valhalla, and R5 (which are multi-modal), and the OpenStreetMap Routing Machine (OSRM) (which is ‘uni-modal’). These can be accessed from R with the packages `opentripplanner`, `valhalla`, `r5r` and `osrm` (Morgan et al. 2019; Pereira et al. 2021). Locally hosted routing engines run on the user’s computer but in a process separate from R. They benefit from speed of execution and control over the weighting profile for different modes of transport. Disadvantages include the difficulty of representing complex networks locally; temporal dynamics (primarily due to traffic); and the need for specialized external software.
+</details>
+
+<details>
+<summary>Remotely hosted dedicated routing engines</summary>
+Remotely hosted routing engines use a web API to send queries about origins and destinations and return results. Routing services based on open source routing engines, such as OSRM’s publicly available service, work the same when called from R as locally hosted instances, simply requiring arguments specifying ‘base URLs’ to be updated. 
+
+Advantages:
+- Provision of routing services worldwide (or usually at least over a large region)
+- Established routing services available are usually update regularly and can often respond to traffic levels
+- Routing services usually run on dedicated hardware and software including systems such as load balancers to ensure consistent performance
+
+Disadvantages
+- cost
+- web connectivity requirement
+</details>
+
+A worked example:
+
+Cycling is most beneficial when it replaces car trips.  Let's isolate them with a filter on `st_length` the length of the desire line.  Then we will call the `stplanr` `route()` function to generate an `sf` object that represents the portion of the network that are suitable for cycling, one for each desire line, calling the osrm API. 
+
+We then plot desire lines along which many short car journeys take place alongside cycling routes.
+
+```{r}
+#| label: 13 cycling
+
+desire_lines <- desire_lines |> 
+  mutate(distance_km = as.numeric(st_length(desire_lines))/ 1000)
+
+desire_lines_short <- desire_lines |> 
+  filter(car_driver >= 100, distance_km <= 5, distance_km >= 2.5)
+
+routes_short <- route(l = desire_lines_short, 
+                      route_fun = route_osrm,
+                     osrm.profile = "bike")
+
+routes_plot_data <- rbind(
+  desire_lines_short |> transmute(Entity = "Desire lines") |> sf::st_set_crs("EPSG:4326"),
+  routes_short |> transmute(Entity = "Cycling Routes") |> sf::st_set_crs("EPSG:4326")
+)
+
+zone_cents_routes <- zone_cents[desire_lines_short, ]
+
+routes_plot_data |> 
+  ggplot() +
+  geom_sf(aes(color = Entity, linetype = Entity)) +
+  scale_color_manual(values = c("black", "red")) +
+  scale_linetype_manual(values = c(2, 1)) +
+  geom_sf(data = zone_cents_routes) +
+  theme_void()
+```
+
+There are many benefits of converting travel desire lines into routes. 
+
+It is important to remember that we cannot be sure how many (if any) trips will follow the exact routes calculated by routing engines. However, route and street/way/segment level results can be highly policy relevant.
+
+## Route Networks
+
+Route networks are often also important outputs: summarizing data such as the potential number of trips made on particular segments can help prioritize investment where it is most needed.
+
+An example:
+
+Imagine that 50% of car trips between 0 to 3 km in route distance are replaced by cycling,a percentage that drops by 10 percentage points for every additional km of route distance so that 20% of car trips of 6 km are replaced by cycling and no car trips that are 8 km or longer are replaced by cycling. 
+
+The mode shift could be modeled as
+
+```{r}
+#| label: 13 mode shift
+
+uptake <- function(x) {
+  case_when(
+    x <= 3 ~ 0.5,
+    x >= 8 ~ 0,
+    TRUE ~ (8 - x) / (8 - 3) * 0.5
+  )
+}
+
+routes_short_scenario <- routes_short |> 
+  mutate(uptake = uptake(distance / 1000)) |> 
+  mutate(bicycle = bicycle + car_driver * uptake,
+         car_driver = car_driver * (1 - uptake))
+
+sum(routes_short_scenario$bicycle) - sum(routes_short$bicycle)
+
+
+```
+
+Having created a scenario in which approximately 4000 trips have switched from driving to cycling, we can now model where this updated modeled cycling activity will take place.
+
+`overline` breaks linestrings at junctions (were two or more linestring geometries meet), and calculates aggregate statistics for each unique route segment
+
+```{r out.width="49%", fig.show='hold', fig.cap="Illustration of the percentage of car trips switching to cycling as a function of distance (left) and route network level results of this function (right).", echo=FALSE, fig.height=6}
+#| label: 13 mode shift illustated
+
+route_network_scenario <- overline(routes_short_scenario, attrib = "bicycle")
+
+routes_short_scenario |> 
+  ggplot() +
+  geom_line(aes(distance / 1000, uptake)) +
+  labs(x = "Route distance (km)", y = NULL, title = "Percent trips switching from driving to cycling") +
+  scale_y_continuous(labels = scales::percent)
+
+tm_shape(route_network_scenario) +
+  tm_lines(lwd = "bicycle", scale = 9, title.lwd = "Number of bike trips per day\n(modeled, one direction)")
+```
+
+
+Transport networks with records at the segment level, typically with attributes such as road type and width, constitute a common type of route network. Such route network datasets are available worldwide from OpenStreetMap.
+
+We will use the author's sample dataset `bristol_ways`, which represents just over 6000 segments.
+
+```{r}
+#| label: 13 bristol ways
+
+summary(bristol_ways)
+```
+
+`sfnetworks` offers `igraph` functionality, while preserving the geometric attributes       
+
+In the example below, the ‘edge betweenness’, meaning the number of shortest paths passing through each edge, is calculated.
+
+```{r}
+#| label: 13 sfnetworks
+
+ways_sfn <- as_sfnetwork(bristol_ways)
+class(ways_sfn)
+
+ways_centrality <- ways_sfn |> 
+  sfnetworks::activate("edges") |>  
+  mutate(betweenness = tidygraph::centrality_edge_betweenness())  # removed the "length" param from the book
+
+bb_wayssln = tmaptools::bb(route_network_scenario, xlim = c(0.1, 0.9), ylim = c(0.1, 0.6), relative = TRUE)
+
+tm_shape(ways_centrality |> 
+           st_as_sf(), bb = bb_wayssln) +
+  tm_lines(lwd = "betweenness", scale = 9, title.lwd = "Betweenness", col = "grey",
+    lwd.legend = c(5000, 10000), legend.lwd.is.portrait = TRUE) +
+  tm_shape(route_network_scenario) +
+  tm_lines(lwd = "bicycle", scale = 9, title.lwd = "Number of bike trips (modeled, one direction)",
+    lwd.legend = c(1000, 2000), legend.lwd.is.portrait = TRUE, col = "darkgreen")
+```
+
+The results demonstrate that each graph edge represents a segment: the segments near the center of the road network have the highest betweenness values, whereas segments closer to central Bristol have higher cycling potential, based on these simplistic datasets.
+
+One can also find the shortest route between origins and destinations using this graph representation of the route network with the `sfnetworks` package.
+
+The example dataset we used above is relatively small. It may also be worth considering how the work could adapt to larger networks
+
+## Prioritizing New Infrastructure
+
+In transport planning we identify promising locations for investment in sustainable transport infrastructure.
+
+This new dataset is created in the code chunk below which: 
+
+1. filters out the cycleway entities from the bristol_ways object representing the transport network; 
+1.  ‘unions’ the individual LINESTRING entities of the cycleways into a single multilinestring object (for speed of buffering); and 
+1. creates a 100 m buffer around them to create a polygon:
+
+```{r eval=FALSE}
+#| label: 13 existing cycleways
+
+existing_cycleways_buffer <- bristol_ways |> 
+  filter(highway == "cycleway") |>    # 1) filter out cycleways
+  st_union() |>                       # 2) unite geometries
+  st_buffer(dist = 100)               # 3) create buffer
+```
+
+The next stage is to create a dataset representing points on the network where there is high cycling potential but little provision for cycling:
+
+```{r eval=FALSE}
+#| label: 13 cycling potential
+
+waldo::compare(
+  sf::st_crs(route_network_scenario),
+  sf::st_crs(existing_cycleways_buffer)
+)
+
+route_network_no_infra = st_difference(
+  # route_network_scenario,
+  # Temporary workaround, see https://github.com/geocompx/geocompr/issues/863:
+  route_network_scenario |> st_set_crs(st_crs(existing_cycleways_buffer)),
+  existing_cycleways_buffer
+)
+
+qtm(route_network_no_infra, basemaps = leaflet::providers$Esri.WorldTopoMap,
+    lines.lwd = 5)
+```
+
+![](https://r.geocompx.org/figures/bristol_cycleways_zoomed.png)
+
+The method has some limitations: in reality, people do not travel to zone centroids or always use the shortest route algorithm for a particular mode.
+
+## Future Directions of Travel
+
+<details>
+<summary>Abstract</summary>
+Transport systems operate at multiple interacting levels, meaning that geocomputational methods have great potential to generate insights into how they work, and the likely impacts of different interventions. There is much more that could be done in this area: it would be possible to build on the foundations presented in this chapter in many directions. Transport is the fastest growing source of greenhouse gas emissions in many countries, and is set to become “the largest GHG emitting sector, especially in developed countries” (see EURACTIV.com). Transport-related emissions are unequally distributed across society but (unlike food and heating) are not essential for well-being. There is great potential for the sector to rapidly decarbonize through demand reduction, electrification of the vehicle fleet and the uptake of active travel modes such as walking and cycling. New technologies can reduce car dependency by enabling more car sharing. ‘Micro-mobility’ systems such as dockless bike and e-scooter schemes are also emerging, creating valuable datasets in the General Bikeshare Feed Specification (GBFS) format, which can be imported and processed with the gbfs package. These and other changes will have large impacts on accessibility, the ability of people to reach employment and service locations that they need, something that can be quantified currently and under scenarios of change with packages such as accessibility packages. Further exploration of such ‘transport futures’ at local, regional and national levels could yield important new insights.
+
+</details>
+
+Methodologically, the foundations presented in this chapter could be extended by including more variables. Characteristics of the route such as speed limits, business and the provision of protected cycling and walking paths could be linked.
+
+This type of analysis underlies the Propensity to Cycle Tool (PCT), a publicly accessible (see [www.pct.bike](www.pct.bike)) mapping tool developed in R that is being used to prioritize investment in cycling across England.
 
 ## Meeting Videos
 
 ### Cohort 1
 
-`r knitr::include_url("https://www.youtube.com/embed/URL")`
+`r knitr::include_url("https://www.youtube.com/embed/1PoOLfWxiAU")`
 
 <details>
 <summary> Meeting chat log </summary>
 
 ```
-LOG
+Cohort1 reviewed Transportation, Geomarketing, and Conclusion together 
+
+00:08:11    Olivier Leroy:    start
+00:17:50    Derek Sollberger (he/his):    The Spatial R book also goes over this Bristol case study, but also normalizes the calculations (by area or by population)
+00:18:50    Olivier Leroy:    Reacted to "The Spatial R book a..." with 👍
+00:20:50    Olivier Leroy:    I just realize it was origine destination 2 lines
+00:20:58    Olivier Leroy:    realized*
+00:21:46    Derek Sollberger (he/his):    yeah, these geospatial authors really like short variable names
+00:24:27    Olivier Leroy:    It would become very heavy on computation
+00:30:49    Derek Sollberger (he/his):    so, does making desire lines reduce path-finding computation?
+00:35:18    Olivier Leroy:    Replying to "so, does making desi..."
+
+My guess is yes because you just calculate one way and not lets say the five shortest one
+00:44:00    Derek Sollberger (he/his):    I like these case studies (reminds me of city planning courses)
+00:44:12    Olivier Leroy:    Reacted to "I like these case st..." with 👍
+00:45:22    Olivier Leroy:    Older 😛
+00:46:32    Olivier Leroy:    Why do all gov agency are using this old tricks of negative value for na
+00:47:15    Derek Sollberger (he/his):    To be fair, many of us R programmers barely really know what NA, NULL, etc. are
 ```
 </details>

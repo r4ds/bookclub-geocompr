@@ -1,24 +1,74 @@
 # Conclusion
 
-**Learning objectives:**
+A feature of R, and open source software in general, is that there are multiple ways to achieve the same result.
 
-- THESE ARE NICE TO HAVE BUT NOT ABSOLUTELY NECESSARY
+## Package Choice
 
-## SLIDE 1
+The authors recommend using the more recent, more performant and future-proof `sf` package.
 
-- ADD SLIDES AS SECTIONS (`##`).
-- TRY TO KEEP THEM RELATIVELY SLIDE-LIKE; THESE ARE NOTES, NOT THE BOOK ITSELF.
+As of mid-2023, there are more than 160 packages mentioned in the Spatial Task View and countless functions for geographic data analysis are developed each year.
+
+The author's advice is to start by learning one approach in depth but to have a general understanding of the breadth of available options.
+
+## Gaps and Overlaps
+
+Some topics are covered in-depth elsewhere.
+
+See [https://www.css.cornell.edu/faculty/dgr2/teach/](https://www.css.cornell.edu/faculty/dgr2/teach/)
+
+and [https://sdesabbata.github.io/r-for-geographic-data-science/](https://sdesabbata.github.io/r-for-geographic-data-science/)
+
+Big data has largely been omitted from this book.  But follow Apache Sedona and GeoParquet (or even geo-Arrow) for the latest developments
+
+## Getting Help
+
+- start from first principles, make a sketch
+- diagnose individual lines for expected output
+- read the docs
+- consider a broader on-line search. GPT-3 or stack overflow are built on prior answers
+- if all else fails, build a reprex and ask in a forum like R4DS
+
+Forums mentioned:
+
+- R’s Special Interest Group on Geographic data email list (R-SIG-GEO)
+- The GIS Stackexchange website at gis.stackexchange.com
+- stackoverflow.com
+- the RStudio Community, rOpenSci and the Stan forum
+- GitHub, which often has discussion and issue features.  See `sfnetworks` package as an example
+- Slack for rOpenSci and geocompx community, of which this book is a part
+
+Demonstrating your own efforts to solve a problem publicly, and providing a reproducible example of the problem, is a way of contributing to this body of knowledge.
+
+## Where to go next
+
+See Geocomputation with Python, for an introduction to geocomputation with Python.
+
+The authors recommend exploring and learning new research topics and methods from academic and theoretical perspectives. Many methods that have been written about have yet to be implemented. Learning about geographic methods and potential applications can therefore be rewarding, before writing any code.
+
+## FOSS
+
+One of the elements of the term introduced in Chapter 1 was that geographic methods should have a positive impact. Of course, how to define and measure ‘positive’ is a subjective, philosophical question, beyond the scope of this book. Regardless of your worldview, consideration of the impacts of geocomputational work is a useful exercise: the potential for positive impacts can provide a powerful motivation for future learning and, conversely, new methods can open-up many possible fields of application. These considerations lead to the conclusion that geocomputation is part of a wider ‘open source approach’.
+
+Reproducibility
+
+- encourages creativity by shifting the focus away from the basics (which are readily available through shared code) and towards applications;
+- discourages people from ‘reinventing the wheel’: there is no need to re-do what others have done if their methods can be used by others; and
+- makes research more conducive to real world applications, by enabling anyone in any sector to apply your methods in new areas.
+
+The open source approach is more than a technical entity. It is a community composed of people interacting daily with shared aims: to produce high performance tools, free from commercial or legal restrictions, that are accessible for anyone to use. The open source approach to working with geographic data has advantages that transcend the technicalities of how the software works, encouraging learning, collaboration and an efficient division of labor.
+
+It is instructive to watch the incessant development activity happen in public fora such as GitHub, but it is even more rewarding to become an active participant. This is one of the greatest features of the open source approach: it encourages people to get involved.
 
 ## Meeting Videos
 
 ### Cohort 1
 
-`r knitr::include_url("https://www.youtube.com/embed/URL")`
+`r knitr::include_url("https://www.youtube.com/embed/1PoOLfWxiAU")`
 
 <details>
 <summary> Meeting chat log </summary>
 
 ```
-LOG
+Cohort1 reviewed Transportation, Geomarketing, and Conclusion together 
 ```
 </details>
