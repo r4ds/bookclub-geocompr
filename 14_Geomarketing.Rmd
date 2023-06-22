@@ -316,7 +316,6 @@ For instance, a score greater than 9 might be a suitable threshold indicating ra
 
 <details>
 <summary> Meeting chat log </summary>
-
 ```
 Cohort1 reviewed Transportation, Geomarketing, and Conclusion together 
 

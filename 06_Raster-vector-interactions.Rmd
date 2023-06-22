@@ -214,12 +214,17 @@ plot(grain_poly)
 
 ### Cohort 1
 
-`r knitr::include_url("https://www.youtube.com/embed/URL")`
+`r knitr::include_url("https://www.youtube.com/embed/iUUxI4B_zKE")`
 
 <details>
 <summary> Meeting chat log </summary>
 
 ```
-LOG
+00:26:13	Derek Sollberger:	srtm == "shuttle radar topography mission"?  Is that right?
+00:26:26	Tony Vota:	I think that is right
+00:26:32	Tony Vota:	he Shuttle Radar Topography Mission (SRTM) uses inSAR which measures Earth's elevation with two antennas. Using two radar antennas and a single pass, it generated a digital elevation model using interferometric synthetic aperture radar (InSAR).
+01:01:30	Derek Sollberger:	The presentation of chapter 7 perhaps should be handled by someone who works with multiple projection systems regularly
+01:03:20	Tony Vota:	Yes, thank you.
+01:03:37	Tony Vota:	Liked how you show each step of the piped transactions
 ```
 </details>

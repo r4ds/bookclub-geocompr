@@ -508,7 +508,6 @@ This type of analysis underlies the Propensity to Cycle Tool (PCT), a publicly a
 
 <details>
 <summary> Meeting chat log </summary>
-
 ```
 Cohort1 reviewed Transportation, Geomarketing, and Conclusion together 
 
