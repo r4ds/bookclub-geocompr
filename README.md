@@ -1,14 +1,14 @@
-# R4DS Geocomputation with R Book Club
+# DSLC Geocomputation with R Book Club
 
-Welcome to the R4DS Geocomputation with R Book Club!
+Welcome to the DSLC Geocomputation with R Book Club!
 
 We are working together to read [_Geocomputation with R_](https://r.geocompx.org/) by Robin Lovelace, Jakub Nowosad, Jannes Muenchow (we're reading 2e, but 1e is [available from CRC Press](https://www.routledge.com/9781138304512)).
-Join the [#book_club-geocompr](https://rfordatascience.slack.com/archives/C04KZ1ZBG74) channel on the [R4DS Slack](https://r4ds.io/join) to participate.
-As we read, we are producing [notes about the book](https://r4ds.io/geocompr).
+Join the [#book_club-geocompr](https://dslcio.slack.com/archives/C04KZ1ZBG74) channel on the [DSLC Slack](https://dslc.io/join) to participate.
+As we read, we are producing [notes about the book](https://dslc.io/geocompr).
 
 ## Meeting Schedule
 
-If you would like to present, please see the sign-up sheet for your cohort (linked below, and pinned in the [#book_club-geocompr](https://rfordatascience.slack.com/archives/C04KZ1ZBG74) channel on Slack)!
+If you would like to present, please see the sign-up sheet for your cohort (linked below, and pinned in the [#book_club-geocompr](https://dslcio.slack.com/archives/C04KZ1ZBG74) channel on Slack)!
 
 - Cohort 1 (started 2023-02-27, finished 2023-06-19): [meeting videos](https://youtube.com/playlist?list=PL3x6DOfs2NGju1IQd7gZ1Zmq-Y23uBX37)
 
@@ -39,5 +39,5 @@ Do these steps each time you present another chapter:
 10. When your PR has been accepted ("merged"), `usethis::pr_finish()` to close out your branch and prepare your local repository for future work.
 11. Now that your local copy is up-to-date with the main repo, you need to update your remote fork. Run `gert::git_push("origin")` or click the `Push` button on the `Git` tab of Rstudio.
 
-When your PR is checked into the main branch, the bookdown site will rebuild, adding your slides to [this site](https://r4ds.io/geocompr).
+When your PR is checked into the main branch, the bookdown site will rebuild, adding your slides to [this site](https://dslc.io/geocompr).
 

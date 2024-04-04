@@ -26,7 +26,7 @@ Big data has largely been omitted from this book.  But follow Apache Sedona and 
 - diagnose individual lines for expected output
 - read the docs
 - consider a broader on-line search. GPT-3 or stack overflow are built on prior answers
-- if all else fails, build a reprex and ask in a forum like R4DS
+- if all else fails, build a reprex and ask in a forum like DSLC
 
 Forums mentioned:
 
